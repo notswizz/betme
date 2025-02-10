@@ -74,6 +74,14 @@ export default async function handler(req, res) {
 
     // Handle action confirmation
     if (confirmAction) {
+      // Get or create conversation first
+      let conversation = conversationId 
+        ? await Conversation.findById(conversationId)
+        : new Conversation({ 
+            messages: [],
+            userId: userId
+          });
+
       const result = await handleAction(confirmAction, userId, token);
       
       if (result.success) {
@@ -102,6 +110,10 @@ export default async function handler(req, res) {
             }
           ];
 
+          // Add messages to conversation
+          conversation.messages.push(...confirmationMessages);
+          await conversation.save();
+
           // Return the object format for the UI
           return res.status(200).json({
             message: { 
@@ -116,15 +128,16 @@ export default async function handler(req, res) {
             { role: 'user', content: 'Confirmed' },
             { role: 'assistant', content: result.message }
           ];
-        }
-        
-        conversation.messages.push(...confirmationMessages);
-        await conversation.save();
+          
+          // Add messages to conversation
+          conversation.messages.push(...confirmationMessages);
+          await conversation.save();
 
-        return res.status(200).json({
-          message: confirmationMessages[1],
-          conversationId: conversation._id.toString()
-        });
+          return res.status(200).json({
+            message: confirmationMessages[1],
+            conversationId: conversation._id.toString()
+          });
+        }
       } else {
         return res.status(400).json({ 
           error: result.error,
@@ -133,13 +146,32 @@ export default async function handler(req, res) {
       }
     }
 
-    // Get or create conversation
-    let conversation = conversationId 
-      ? await Conversation.findById(conversationId)
-      : new Conversation({ 
+    // Get or create conversation for non-confirmation flows
+    let conversation;
+    try {
+      conversation = conversationId 
+        ? await Conversation.findById(conversationId)
+        : new Conversation({ 
+            messages: [],
+            userId: userId
+          });
+      
+      // If conversation wasn't found by ID, create a new one
+      if (!conversation) {
+        conversation = new Conversation({
           messages: [],
           userId: userId
         });
+      }
+
+      // Save new conversation if it was just created
+      if (!conversation._id) {
+        await conversation.save();
+      }
+    } catch (error) {
+      console.error('Error creating/retrieving conversation:', error);
+      return res.status(500).json({ message: 'Error managing conversation' });
+    }
 
     // Add user message to conversation
     const userMessage = {
@@ -372,15 +404,23 @@ async function getOpenBets(userId) {
       status: 'pending'
     })
     .sort({ createdAt: -1 })
-    .limit(20)
+    .limit(50)  // Increased from 20 to 50
     .lean();
+
+    // Add formatted timestamps and ensure all required fields
+    const formattedBets = openBets.map(bet => ({
+      ...bet,
+      formattedTime: new Date(bet.createdAt).toLocaleString(),
+      payout: bet.payout || calculatePayout(bet.stake, bet.odds).toFixed(2),
+      line: bet.line || '-'
+    }));
 
     return {
       success: true,
       message: {
         role: 'assistant',
         type: 'open_bets',
-        content: JSON.stringify(openBets) // Stringify the content
+        content: JSON.stringify(formattedBets)
       }
     };
   } catch (error) {

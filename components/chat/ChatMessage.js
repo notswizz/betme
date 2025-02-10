@@ -17,89 +17,95 @@ function OpenBetsView({ bets, onPlaceSimilar }) {
   }
 
   return (
-    <div className="w-full overflow-x-auto snap-x snap-mandatory flex space-x-4 pb-4 hide-scrollbar">
-      {parsedBets.map((bet) => (
-        <div
-          key={bet._id}
-          className="snap-center flex-none w-[300px] first:ml-4 last:mr-4"
-        >
-          <div className="relative group transform transition-all duration-300 hover:scale-[1.02]">
-            {/* Animated gradient border */}
-            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-gradient-x opacity-70 blur-[1px] group-hover:opacity-100"></div>
-            
-            {/* Card Content */}
-            <div className="relative rounded-2xl bg-gradient-to-br from-gray-900/95 to-gray-800/95 p-4 shadow-xl backdrop-blur-sm border border-gray-700/30">
+    <div className="w-full max-w-[95vw] mx-auto">
+      {/* Scrollable Container */}
+      <div className="overflow-x-auto pb-4 scrollbar-hide">
+        <div className="flex gap-3" style={{ minWidth: 'min-content' }}>
+          {parsedBets.map((bet) => (
+            <div 
+              key={bet._id}
+              className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 rounded-xl p-4 hover:from-gray-800/70 hover:to-gray-900/70 
+                         transition-all duration-200 cursor-pointer group border border-gray-700/30 backdrop-blur-sm
+                         w-[280px] flex-shrink-0 transform hover:scale-[1.02]"
+            >
               {/* Sport & Type Badge */}
               <div className="flex justify-between items-center mb-3">
-                <span className="px-3 py-1 bg-blue-500/20 rounded-full text-blue-400 text-xs font-medium">
-                  {bet.sport}
-                </span>
-                <span className="px-3 py-1 bg-purple-500/20 rounded-full text-purple-400 text-xs font-medium">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-blue-400">{bet.sport}</span>
+                </div>
+                <div className="text-xs font-medium text-purple-400">
                   {bet.type}
-                </span>
+                </div>
               </div>
 
               {/* Teams */}
-              <div className="space-y-2 mb-4">
-                <div className="text-white font-medium truncate">{bet.team1}</div>
-                <div className="flex items-center justify-center">
-                  <span className="text-xs px-3 py-1 rounded-full bg-gray-800/50 text-gray-400 font-medium">VS</span>
+              <div className="space-y-3 mb-4">
+                {/* Team 1 */}
+                <div className="flex items-center justify-between bg-black/20 p-2 rounded-lg">
+                  <span className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">
+                    {bet.team1}
+                  </span>
                 </div>
-                <div className="text-white font-medium truncate">{bet.team2}</div>
+                
+                {/* Team 2 */}
+                <div className="flex items-center justify-between bg-black/20 p-2 rounded-lg">
+                  <span className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">
+                    {bet.team2}
+                  </span>
+                </div>
               </div>
 
               {/* Bet Details */}
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="bg-gray-800/30 rounded-lg p-2">
-                  <div className="text-xs text-gray-400">Line</div>
-                  <div className="text-white font-medium">{bet.line || '-'}</div>
+                <div className="bg-black/20 p-2 rounded-lg">
+                  <div className="text-xs text-gray-500">Line</div>
+                  <div className="text-sm font-medium text-white">{bet.line || '-'}</div>
                 </div>
-                <div className="bg-gray-800/30 rounded-lg p-2">
-                  <div className="text-xs text-gray-400">Odds</div>
-                  <div className="text-white font-medium">{bet.odds}</div>
+                <div className="bg-black/20 p-2 rounded-lg">
+                  <div className="text-xs text-gray-500">Odds</div>
+                  <div className="text-sm font-medium text-white">{bet.odds}</div>
                 </div>
-                <div className="bg-gray-800/30 rounded-lg p-2">
-                  <div className="text-xs text-gray-400">Stake</div>
-                  <div className="text-white font-medium">${bet.stake}</div>
+                <div className="bg-black/20 p-2 rounded-lg">
+                  <div className="text-xs text-gray-500">Stake</div>
+                  <div className="text-sm font-medium text-white">${bet.stake}</div>
                 </div>
-                <div className="bg-gray-800/30 rounded-lg p-2">
-                  <div className="text-xs text-gray-400">Payout</div>
-                  <div className="text-green-400 font-medium">${bet.payout}</div>
+                <div className="bg-black/20 p-2 rounded-lg">
+                  <div className="text-xs text-gray-500">Payout</div>
+                  <div className="text-sm font-medium text-green-400">${bet.payout}</div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2">
-                <button
+              <div className="grid grid-cols-[1fr,auto,1fr] gap-3 pt-3 border-t border-gray-700/30">
+                {/* Bet Button */}
+                <button 
                   onClick={() => onPlaceSimilar(bet)}
-                  className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg"
+                  className="flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 hover:from-blue-500/30 hover:to-blue-600/30 transition-all duration-300 group relative overflow-hidden"
                 >
-                  Place Similar
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-blue-400/10 to-blue-500/10 animate-gradient-x"></div>
+                  <span className="text-xl mb-0.5 transform group-hover:scale-110 transition-transform duration-300">🎯</span>
+                  <span className="text-[11px] font-medium text-blue-400 group-hover:text-blue-300">Bet</span>
                 </button>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(bet._id);
-                    // You could add a toast notification here
-                  }}
-                  className="px-3 py-2 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg text-sm font-medium hover:from-gray-600 hover:to-gray-700 transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg"
-                >
-                  Share
-                </button>
-              </div>
 
-              {/* Time Indicator */}
-              <div className="absolute top-2 right-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-gray-400">
-                    {new Date(bet.createdAt).toLocaleTimeString()}
-                  </span>
+                {/* Time */}
+                <div className="flex flex-col items-center justify-center px-3">
+                  <span className="text-[10px] text-gray-500">{bet.formattedTime || new Date(bet.createdAt).toLocaleTimeString()}</span>
                 </div>
+                
+                {/* Share Button */}
+                <button 
+                  onClick={() => navigator.clipboard.writeText(bet._id)}
+                  className="flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-600/20 hover:from-indigo-500/30 hover:to-purple-600/30 transition-all duration-300 group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-400/10 to-indigo-500/10 animate-gradient-x"></div>
+                  <span className="text-xl mb-0.5 transform group-hover:scale-110 transition-transform duration-300">🔗</span>
+                  <span className="text-[11px] font-medium text-indigo-400 group-hover:text-indigo-300">Share</span>
+                </button>
               </div>
             </div>
-          </div>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }

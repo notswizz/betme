@@ -166,171 +166,167 @@ export default function ChatContainer() {
   };
 
   return (
-    <div className="relative flex h-full">
+    <div className="flex h-[100dvh] bg-gray-900 overflow-hidden">
       {/* Mobile Menu Toggle Button */}
       <button 
         onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 w-11 h-11 bg-gradient-to-br from-gray-800/95 to-gray-900/95 backdrop-blur-xl rounded-xl flex items-center justify-center shadow-lg border border-gray-700/50 hover:border-blue-500/30 transition-all duration-300 hover:scale-105"
+        className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-gray-800/90 backdrop-blur-xl rounded-xl flex items-center justify-center shadow-lg border border-gray-700/50"
       >
         <div className="relative w-5 h-5 flex flex-col justify-center gap-1">
-          <span className={`block h-0.5 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all duration-300 ${
+          <span className={`block h-0.5 bg-gray-300 rounded-full transition-all duration-300 ${
             isSideMenuOpen ? 'w-5 -rotate-45 translate-y-1.5' : 'w-5'
           }`}></span>
-          <span className={`block h-0.5 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all duration-300 ${
+          <span className={`block h-0.5 bg-gray-300 rounded-full transition-all duration-300 ${
             isSideMenuOpen ? 'w-0 opacity-0' : 'w-3.5'
           }`}></span>
-          <span className={`block h-0.5 bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all duration-300 ${
+          <span className={`block h-0.5 bg-gray-300 rounded-full transition-all duration-300 ${
             isSideMenuOpen ? 'w-5 rotate-45 -translate-y-1.5' : 'w-4'
           }`}></span>
         </div>
       </button>
 
-      {/* Header Bar with Title - Sticky */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-[72px] bg-gradient-to-b from-gray-900 to-gray-900/0 backdrop-blur-xl z-40">
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group transition-all duration-300 hover:scale-110">
-            <div className="relative">
-              <div className="absolute inset-0 w-4 h-4 bg-blue-400/20 rounded-full animate-ping"></div>
-              <span className="text-xl relative">🎯</span>
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-0 right-0 z-40 bg-gray-900/80 backdrop-blur-xl border-b border-gray-800">
+        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center">
+          {/* Left spacer for menu button on mobile */}
+          <div className="w-10 md:w-0"></div>
+          
+          {/* Centered title */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                <span className="text-xl">🎯</span>
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-white">BetChat</h1>
+                <p className="text-xs text-gray-500">AI-Powered Betting Assistant</p>
+              </div>
             </div>
           </div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-blue-300 text-transparent bg-clip-text tracking-wide">
-            BetChat
-          </h1>
+
+          {/* Logout button */}
+          <button
+            onClick={handleLogout}
+            className="w-10 h-10 bg-gray-800/90 hover:bg-gray-700/90 text-gray-300 hover:text-white rounded-xl flex items-center justify-center transition-all duration-200 shadow-lg"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      {/* Mobile Logout Button - Always visible */}
-      <button
-        onClick={handleLogout}
-        className="md:hidden fixed top-4 right-4 z-50 w-11 h-11 bg-gradient-to-br from-gray-800/95 to-gray-900/95 backdrop-blur-xl rounded-xl flex items-center justify-center shadow-lg border border-gray-700/50 hover:border-red-500/30 transition-all duration-300 hover:scale-105 group"
-      >
-        <div className="relative w-5 h-5">
-          <svg className="absolute inset-0 w-5 h-5 text-red-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rotate-180 scale-75 group-hover:scale-100 group-hover:rotate-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <svg className="absolute inset-0 w-5 h-5 text-gray-400 group-hover:opacity-0 transition-opacity duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-        </div>
-      </button>
-
-      {/* Side Menu - Hidden on mobile by default, shown when isSideMenuOpen is true */}
-      <div className={`fixed md:relative md:flex flex-col w-64 h-full bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 border-r border-gray-800 p-4 transition-all duration-300 ease-in-out z-40
-                      ${isSideMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} 
-                      md:translate-x-0 md:shadow-none`}>
-        <div className="flex-1 space-y-4">
+      {/* Side Menu */}
+      <div className={`fixed md:relative md:flex flex-col w-72 h-full bg-gray-900 border-r border-gray-800 transition-transform duration-300 ease-in-out z-30
+                      ${isSideMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
+                      md:translate-x-0`}>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 pt-20">
           <NewChatButton onClick={startNewChat} />
           <TokenBalance />
           <BetStats />
-        </div>
-        
-        {/* BetChat Logo and Title */}
-        <div className="pt-1 border-t border-gray-800/50">
-          <div className="flex items-center gap-3 px-2 py-1.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/30 to-blue-400/0 opacity-0 group-hover:opacity-100 animate-gradient-x"></div>
-              <div className="relative flex items-center justify-center">
-                <div className="absolute inset-0 w-6 h-6 bg-blue-400/20 rounded-lg animate-pulse"></div>
-                <span className="text-xl relative">🎯</span>
-              </div>
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-bold bg-gradient-to-r from-blue-100 via-blue-300 to-blue-100 text-transparent bg-clip-text">BetChat</h3>
-              <p className="text-xs text-gray-500">AI-Powered Betting Assistant</p>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Overlay for mobile menu */}
       {isSideMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 md:hidden"
           onClick={() => setIsSideMenuOpen(false)}
         />
       )}
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-[100dvh] md:h-full">
+      <div className="flex-1 flex flex-col h-full relative overflow-hidden">
         {/* Messages Section */}
-        <div className="flex-1 overflow-y-auto p-4 pt-16 md:pt-8 space-y-4">
-          {messages.length === 0 ? (
-            <div className="h-full flex flex-col">
-              <div className="w-full mt-4">
-                <Scoreboard />
-                <div className="mt-6 grid grid-cols-2 gap-3 max-w-2xl mx-auto px-4">
-                  <button
-                    onClick={() => handleNewMessage("I want to place a bet")}
-                    className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-blue-400 group-hover:text-blue-300">🎯</span>
-                      <div className="font-medium">Place a Bet</div>
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => handleNewMessage("Show me today's best bets")}
-                    className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-blue-400 group-hover:text-blue-300">🔥</span>
-                      <div className="font-medium">Best Bets</div>
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => handleNewMessage("Show me today's scores")}
-                    className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-blue-400 group-hover:text-blue-300">📊</span>
-                      <div className="font-medium">Check Scores</div>
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => handleNewMessage("What's my token balance?")}
-                    className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="text-blue-400 group-hover:text-blue-300">📸</span>
-                      <div className="font-medium">Upload Betslip</div>
-                    </span>
-                  </button>
+        <div className="flex-1 overflow-y-auto pt-14 pb-20 overscroll-none">
+          <div className="w-full max-w-4xl mx-auto px-4">
+            {messages.length === 0 ? (
+              <div className="h-full flex flex-col justify-center -mt-16">
+                <div className="w-full max-w-full overflow-x-hidden">
+                  <Scoreboard />
+                  <div className="mt-4 grid grid-cols-2 gap-3 max-w-xl mx-auto px-4">
+                    <button
+                      onClick={() => handleNewMessage("I want to place a bet")}
+                      className="aspect-[4/3] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-2xl border border-gray-700/30 hover:border-blue-500/30 p-4 group transition-all duration-200 hover:scale-[1.02]"
+                    >
+                      <div className="h-full flex flex-col items-center justify-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                          <span className="text-xl">🎯</span>
+                        </div>
+                        <div className="font-medium text-gray-300 group-hover:text-white text-center text-sm">Place a Bet</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleNewMessage("Show me today's best bets")}
+                      className="aspect-[4/3] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-2xl border border-gray-700/30 hover:border-blue-500/30 p-4 group transition-all duration-200 hover:scale-[1.02]"
+                    >
+                      <div className="h-full flex flex-col items-center justify-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                          <span className="text-xl">🔥</span>
+                        </div>
+                        <div className="font-medium text-gray-300 group-hover:text-white text-center text-sm">Best Bets</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleNewMessage("Show me open bets")}
+                      className="aspect-[4/3] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-2xl border border-gray-700/30 hover:border-blue-500/30 p-4 group transition-all duration-200 hover:scale-[1.02]"
+                    >
+                      <div className="h-full flex flex-col items-center justify-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                          <span className="text-xl">📊</span>
+                        </div>
+                        <div className="font-medium text-gray-300 group-hover:text-white text-center text-sm">Open Bets</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleNewMessage("What's my token balance?")}
+                      className="aspect-[4/3] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-2xl border border-gray-700/30 hover:border-blue-500/30 p-4 group transition-all duration-200 hover:scale-[1.02]"
+                    >
+                      <div className="h-full flex flex-col items-center justify-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                          <span className="text-xl">💰</span>
+                        </div>
+                        <div className="font-medium text-gray-300 group-hover:text-white text-center text-sm">Check Balance</div>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <>
-              {messages.map((msg, index) => (
-                <div key={index} className="snap-start">
-                  <ChatMessage
-                    message={msg}
-                    onConfirmAction={handleConfirmAction}
-                    onCancelAction={handleCancelAction}
-                  />
-                </div>
-              ))}
-              <div ref={messagesEndRef} className="h-4" />
-            </>
-          )}
-          {isLoading && (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200"></div>
-            </div>
-          )}
-          {error && (
-            <div className="text-red-500 text-sm">{error}</div>
-          )}
+            ) : (
+              <div className="space-y-2 py-2">
+                {messages.map((msg, index) => (
+                  <div key={index} className="snap-start">
+                    <ChatMessage
+                      message={msg}
+                      onConfirmAction={handleConfirmAction}
+                      onCancelAction={handleCancelAction}
+                    />
+                  </div>
+                ))}
+                <div ref={messagesEndRef} className="h-2" />
+              </div>
+            )}
+            {isLoading && (
+              <div className="flex items-center justify-center space-x-2 py-4">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200"></div>
+              </div>
+            )}
+            {error && (
+              <div className="text-red-500 text-sm text-center py-4">{error}</div>
+            )}
+          </div>
         </div>
 
         {/* Input Section */}
-        <div className="sticky bottom-0 left-0 right-0 p-4 bg-gray-900/80 backdrop-blur-lg border-t border-gray-800">
-          <ChatInput 
-            onSubmit={handleNewMessage}
-            isLoading={isLoading}
-          />
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 via-gray-900 to-gray-900/0 pt-4">
+          <div className="w-full max-w-4xl mx-auto px-4 pb-4">
+            <ChatInput 
+              onSubmit={handleNewMessage}
+              isLoading={isLoading}
+            />
+          </div>
         </div>
       </div>
     </div>
