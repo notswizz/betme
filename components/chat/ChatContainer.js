@@ -77,12 +77,24 @@ export default function ChatContainer() {
       if (!response.ok) {
         const errorMessage = data.message || data.error || 'Failed to process message';
         console.error('Chat error:', errorMessage);
+        
+        // Log additional error details if available
+        if (data.details) {
+          console.error('Error details:', data.details);
+        }
+        
         setError(errorMessage);
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          type: 'text',
-          content: errorMessage
-        }]);
+        
+        // Don't add error to messages if it's a basketball query that failed
+        if (!userMessage.content.toLowerCase().includes('points') && 
+            !userMessage.content.toLowerCase().includes('stats') && 
+            !userMessage.content.toLowerCase().includes('averaging')) {
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            type: 'text',
+            content: errorMessage
+          }]);
+        }
         return;
       }
 
@@ -117,6 +129,17 @@ export default function ChatContainer() {
             return [...filteredPrev, data.message];
           });
         }
+        // For basketball stats queries
+        else if (data.message.type === 'player_stats') {
+          setMessages(prev => {
+            const filteredPrev = prev.filter(msg => 
+              msg.type !== 'player_stats' &&
+              ((typeof msg.content === 'string' && msg.content.trim()) || 
+               typeof msg.content === 'object')
+            );
+            return [...filteredPrev, data.message];
+          });
+        }
         // For all other messages, add them if they're not empty and not just whitespace
         else if ((typeof data.message.content === 'string' && data.message.content.trim()) || 
                  typeof data.message.content === 'object') {
@@ -136,11 +159,17 @@ export default function ChatContainer() {
     } catch (error) {
       console.error('Chat error:', error);
       setError(error.message);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        type: 'text',
-        content: 'Sorry, there was an error processing your message. Please try again.'
-      }]);
+      
+      // Don't add error to messages if it's a basketball query that failed
+      if (!message.content.toLowerCase().includes('points') && 
+          !message.content.toLowerCase().includes('stats') && 
+          !message.content.toLowerCase().includes('averaging')) {
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          type: 'text',
+          content: 'Sorry, there was an error processing your message. Please try again.'
+        }]);
+      }
     } finally {
       setIsLoading(false);
     }

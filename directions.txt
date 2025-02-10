@@ -103,204 +103,108 @@ Betting Flow:
 
 ### 6. Sports API Integration
 
-#### API Configuration
-- Provider: RapidAPI Basketball API
-- Base URL: https://api-basketball.p.rapidapi.com
-- League Focus: NBA (League ID: 12)
-- Authentication: API Key via headers
+#### NBA Analysis System
 
-#### Data Structures
-Game Data Format:
-```javascript
-{
-  id: String,
-  league: 'NBA',
-  status: String,  // 'NS', 'LIVE', 'FT', 'HT', etc.
-  quarter: String, // Current quarter or game status
-  timeLeft: String,
-  team1: {
-    name: String,
-    logo: String,
-    score: Number,
-    quarterScores: {
-      q1: Number,
-      q2: Number,
-      q3: Number,
-      q4: Number,
-      ot: Number
-    }
-  },
-  team2: {
-    name: String,
-    logo: String,
-    score: Number,
-    quarterScores: {
-      q1: Number,
-      q2: Number,
-      q3: Number,
-      q4: Number,
-      ot: Number
-    }
-  },
-  venue: String,
-  date: Date
-}
-```
-
-#### Features
-1. Data Caching:
-   - 5-minute cache duration
-   - Cache key format: `games_${date}_${season}`
-   - Automatic cache invalidation
-   - Fallback to cache on rate limits
-
-2. Season Handling:
-   - Dynamic season calculation
-   - Format: "YYYY-YYYY"
-   - Season transition in October
-   - Automatic season detection based on date
-
-3. Date Management:
-   - Timezone handling (America/New_York)
-   - Date normalization to midnight
-   - Consistent UTC conversion
-   - Date range selection (±7 days)
-
-4. Rate Limiting:
-   - Header tracking (x-ratelimit-requests-limit)
-   - Remaining requests monitoring
-   - Automatic retry with exponential backoff
-   - Cache fallback on 429 errors
-
-### 12. Scoreboard Component
-
-#### Overview
-The Scoreboard component provides a real-time display of NBA games with live updates and interactive features.
-
-#### Key Components
-
-1. Main Scoreboard (`Scoreboard.js`):
-   - Real-time game updates (30-second refresh)
-   - Horizontal scrolling game cards
-   - Loading states with skeleton UI
-   - Error handling and fallbacks
-   - Automatic date handling for current day's games
-
-2. Game Cards:
-   - Team information (names, logos)
-   - Live scores and quarter breakdowns
-   - Game status indicators
-   - Venue information
-   - Interactive betting and analysis buttons
-   - Hover effects and animations
-
-#### Data Flow
-
-1. Initial Load:
+1. Query Processing Pipeline:
    ```javascript
-   // Fetch games for current date
-   const fetchGames = async () => {
-     const games = await fetchBasketballGames();
-     const todaysGames = filterGamesForToday(games);
-     setGames(todaysGames);
-   };
+   User Query -> Venice AI -> Process.js -> NbaApi.js -> Response
    ```
 
-2. Auto-Refresh:
-   - 30-second intervals
-   - Maintains game state
-   - Updates scores and status
-   - Cleans up on unmount
+2. Query Types & Handlers:
+   - Player Stats:
+     ```javascript
+     {
+       intent: "basketball_query",
+       type: "player_stats",
+       player: "player_name",
+       stat: "points|assists|rebounds|all"
+     }
+     ```
+   - Team Stats:
+     ```javascript
+     {
+       intent: "basketball_query",
+       type: "TEAM.STATS.HOME|AWAY",
+       parameters: { team: "team_name" }
+     }
+     ```
+   - Live Games:
+     ```javascript
+     {
+       intent: "basketball_query",
+       type: "GAME.LIVE"
+     }
+     ```
 
-3. Game Filtering:
-   - Shows only current day's games
-   - Sorts by game time
-   - Filters out finished games
-   - Handles timezone differences
+3. Data Flow:
+   a. User sends query (e.g., "how many points is trae young averaging?")
+   b. Venice AI processes query and generates structured intent
+   c. Process.js extracts intent and routes to NBA API
+   d. NbaApi.js handles query with:
+      - Player lookup
+      - Stats retrieval
+      - Response formatting
+      - Caching
+      - Rate limiting
 
-#### Visual Features
+4. Rate Limiting & Caching:
+   - Max 30 requests per minute
+   - 5-minute cache duration
+   - Automatic retry with backoff
+   - Request timeout: 10 seconds
+   - Sliding window rate tracking
 
-1. Game Card Design:
-   - Gradient backgrounds
-   - Team-based layouts
-   - Score highlighting
-   - Quarter-by-quarter breakdown
-   - Status indicators
-   - Interactive elements
+5. Player Stats Processing:
+   - Name normalization
+   - Team association
+   - Season detection
+   - Stat calculation:
+     * Points per game
+     * Assists
+     * Rebounds
+     * Field goal %
+     * Three-point %
+     * Minutes played
 
-2. Loading States:
-   - Skeleton loading UI
-   - Smooth transitions
-   - Placeholder content
-   - Error state handling
+6. Response Format:
+   ```javascript
+   {
+     role: "assistant",
+     type: "text",
+     content: "Player is averaging X points, Y rebounds..."
+   }
+   ```
 
-3. Responsive Layout:
-   - Horizontal scrolling
-   - Mobile-friendly design
-   - Flexible card sizing
-   - Touch-friendly interactions
+7. Error Handling:
+   - Player not found
+   - Invalid stats
+   - Rate limit exceeded
+   - API timeout
+   - Network errors
+   - Cache misses
 
-#### Performance Optimizations
-
-1. Data Management:
-   - Memoized callbacks
-   - Efficient re-renders
-   - Controlled updates
-   - Smart caching
-
-2. UI Performance:
-   - CSS transitions
-   - Hardware acceleration
-   - Lazy loading
-   - Optimized animations
-
-3. Network Efficiency:
-   - Cached API responses
-   - Batched updates
-   - Rate limit handling
+8. Performance Optimizations:
+   - Player name caching
+   - Team roster caching
+   - Stats memoization
+   - Request batching
+   - Response formatting
    - Error recovery
 
-#### User Interaction
+9. Known Player Mappings:
+   - Star player quick lookup
+   - Team associations
+   - Jersey numbers
+   - Position data
+   - Active status
 
-1. Game Cards:
-   - Hover effects
-   - Click actions
-   - Betting integration
-   - Analysis features
-
-2. Navigation:
-   - Smooth scrolling
-   - Touch gestures
-   - Keyboard accessibility
-   - Focus management
-
-#### Error Handling
-
-1. API Failures:
-   - Fallback content
-   - Retry mechanism
-   - User feedback
-   - Cache utilization
-
-2. Data Issues:
-   - Null checks
-   - Default values
-   - Fallback images
-   - Status messages
-
-#### Future Enhancements
-
-1. Planned Features:
-   - Date selection
-   - Team filtering
-   - Advanced statistics
-   - Betting odds integration
-
-2. Improvements:
-   - Performance monitoring
-   - Analytics integration
-   - A/B testing
-   - User preferences
+10. Query Features:
+    - Full season stats
+    - Specific stat queries
+    - Team performance
+    - Head-to-head matchups
+    - Live game scores
+    - Player comparisons
 
 ### 7. UI Components
 1. Side Menu:

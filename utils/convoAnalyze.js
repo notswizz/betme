@@ -3,6 +3,14 @@ import { addTokens } from '@/pages/api/actions/balance';
 import { createListing } from '@/pages/api/actions/listing';
 import { submitBet } from './betSubmission';
 import { isAuthenticated } from './auth';
+import { 
+  handleBasketballQuery, 
+  getPlayerStats, 
+  getTeamStats, 
+  getLiveGameStats,
+  getSeasonLeaders 
+} from './nbaApi';
+import { generateAIResponse } from './venice.js';
 
 // Define available actions
 const ACTIONS = {
@@ -10,6 +18,7 @@ const ACTIONS = {
   ADD_TOKENS: 'add_tokens',
   CREATE_LISTING: 'create_listing',
   PLACE_BET: 'place_bet',
+  BASKETBALL_QUERY: 'basketball_query',
   // Add more WRITE actions here that need confirmation
   // Add new actions that need confirmation
 };
@@ -20,15 +29,156 @@ const DIRECT_RESPONSES = {
   VIEW_LISTINGS: 'view_listings',
   VIEW_BETS: 'view_bets',
   VIEW_OPEN_BETS: 'view_open_bets',
+  BASKETBALL_INFO: 'basketball_info',
   // Add new direct actions here
 };
+
+// Define query types for basketball
+const BASKETBALL_QUERY_TYPES = {
+  PLAYER_STATS: 'player_stats',
+  TEAM_STATS: 'team_stats',
+  LIVE_GAMES: 'live_games',
+  SEASON_LEADERS: 'season_leaders',
+  HEAD_TO_HEAD: 'head_to_head',
+  STANDINGS: 'standings'
+};
+
+// Basketball query handler
+async function handleBasketballIntent(aiResponse) {
+  try {
+    console.log('Processing basketball intent:', aiResponse);
+
+    // Extract the actual query data from the intent
+    const queryData = {
+      type: aiResponse.type,
+      player: aiResponse.player,
+      stat: aiResponse.stat,
+      team: aiResponse.team
+    };
+
+    console.log('Extracted query data:', queryData);
+
+    // Handle basic player stats query
+    if (queryData.type === 'player_stats') {
+      console.log('Processing player stats query for:', queryData.player);
+      const playerStats = await getPlayerStats({
+        player: queryData.player
+      });
+      
+      if (!playerStats) {
+        return {
+          type: 'error',
+          message: `Couldn't find stats for ${queryData.player}`
+        };
+      }
+
+      // If a specific stat was requested
+      if (queryData.stat && queryData.stat !== 'all') {
+        const statValue = playerStats.averages[queryData.stat];
+        if (statValue === undefined) {
+          return {
+            type: 'error',
+            message: `Couldn't find ${queryData.stat} stats for ${queryData.player}`
+          };
+        }
+        return {
+          type: 'text',
+          content: `${playerStats.player.firstName} ${playerStats.player.lastName} is averaging ${statValue} ${queryData.stat} per game this season.`
+        };
+      }
+
+      // Return full stats
+      return {
+        type: 'text',
+        content: `${playerStats.player.firstName} ${playerStats.player.lastName} is averaging ${playerStats.averages.points} points, ${playerStats.averages.rebounds} rebounds, and ${playerStats.averages.assists} assists in ${playerStats.averages.minutes} minutes per game this season.`
+      };
+    }
+
+    // Handle other query types
+    switch (queryData.type) {
+      case BASKETBALL_QUERY_TYPES.TEAM_STATS:
+        const teamStats = await getTeamStats(queryData.team);
+        if (!teamStats) {
+          return {
+            type: 'error',
+            message: `Couldn't find stats for ${queryData.team}`
+          };
+        }
+        return {
+          type: 'text',
+          content: formatTeamStatsResponse(teamStats)
+        };
+      
+      case BASKETBALL_QUERY_TYPES.LIVE_GAMES:
+        const liveGames = await getLiveGameStats();
+        return {
+          type: 'text',
+          content: formatLiveGamesResponse(liveGames)
+        };
+      
+      case BASKETBALL_QUERY_TYPES.SEASON_LEADERS:
+        const leaders = await getSeasonLeaders(
+          aiResponse.season || getCurrentSeason(),
+          aiResponse.category || 'points'
+        );
+        return {
+          type: 'text',
+          content: formatLeadersResponse(leaders)
+        };
+      
+      default:
+        return {
+          type: 'error',
+          message: 'Unknown basketball query type'
+        };
+    }
+  } catch (error) {
+    console.error('Error handling basketball intent:', error);
+    return {
+      type: 'error',
+      message: 'Error processing basketball query'
+    };
+  }
+}
+
+// Format team stats response
+function formatTeamStatsResponse(teamStats) {
+  const { team, stats } = teamStats;
+  return `The ${team.name} (${team.nickname}) are currently ${stats.wins}-${stats.losses} ` +
+         `(${stats.winPercentage}%) this season. They're averaging ${stats.points} points per game ` +
+         `while allowing ${stats.pointsAgainst} points. Current streak: ${stats.streak}.`;
+}
+
+// Format live games response
+function formatLiveGamesResponse(games) {
+  if (games.length === 0) {
+    return 'There are no live NBA games at the moment.';
+  }
+
+  return games.map(game => {
+    const { teams, status, period, clock } = game;
+    return `${teams.away.name} ${teams.away.score} @ ${teams.home.name} ${teams.home.score}\n` +
+           `${status} - ${period}Q ${clock}`;
+  }).join('\n\n');
+}
+
+// Format leaders response
+function formatLeadersResponse(leaders) {
+  if (leaders.length === 0) {
+    return 'No season leaders data available.';
+  }
+
+  return 'Season Leaders:\n' + leaders.slice(0, 5).map((player, index) => 
+    `${index + 1}. ${player.name} (${player.team}): ${player.value}`
+  ).join('\n');
+}
 
 /**
  * Analyzes conversation to decide what to do
  */
 export async function analyzeConversation(messages) {
   const lastMessage = messages[messages.length - 1].content;
-  const aiResponse = await analyzeIntent(lastMessage);
+  const aiResponse = await generateAIResponse(messages);
 
   // If we got no response from the AI, default to chat
   if (!aiResponse) {
@@ -38,9 +188,44 @@ export async function analyzeConversation(messages) {
 
   console.log('Parsed AI response:', aiResponse);
 
+  // Extract JSON from AI response if it exists
+  let parsedIntent;
+  try {
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}$/);
+    if (jsonMatch) {
+      parsedIntent = JSON.parse(jsonMatch[0]);
+      console.log('Extracted intent:', parsedIntent);
+    }
+  } catch (error) {
+    console.error('Error parsing intent JSON:', error);
+  }
+
+  // Check if it's a basketball query
+  if (parsedIntent?.intent === 'basketball_query') {
+    console.log('Detected basketball query:', lastMessage);
+    try {
+      const response = await handleBasketballIntent(parsedIntent);
+      console.log('Basketball API response:', response);
+      
+      if (response.type === 'error') {
+        console.log('Basketball query failed:', response.message);
+        return { type: 'chat' };
+      }
+      
+      return {
+        type: 'direct',
+        action: DIRECT_RESPONSES.BASKETBALL_INFO,
+        data: response
+      };
+    } catch (error) {
+      console.error('Basketball query error:', error);
+      return { type: 'chat' };
+    }
+  }
+
   // Handle viewing intents
-  if (aiResponse.intent) {
-    switch (aiResponse.intent) {
+  if (parsedIntent?.intent) {
+    switch (parsedIntent.intent) {
       case 'view_open_bets':
         return { type: 'direct', action: DIRECT_RESPONSES.VIEW_OPEN_BETS };
       case 'view_bets':
@@ -49,24 +234,35 @@ export async function analyzeConversation(messages) {
         return { type: 'direct', action: DIRECT_RESPONSES.BALANCE_CHECK };
       case 'view_listings':
         return { type: 'direct', action: DIRECT_RESPONSES.VIEW_LISTINGS };
+      case 'place_bet':
+        if (parsedIntent.type === 'betting') {
+          return {
+            type: 'action',
+            content: `Would you like to place a bet on ${parsedIntent.team}?`,
+            tool_calls: [{
+              name: 'place_bet',
+              team: parsedIntent.team
+            }]
+          };
+        }
     }
   }
 
   // If it's a betting intent, handle bet data
-  if (aiResponse.type && aiResponse.sport) {
+  if (parsedIntent?.type === 'betting') {
     const betData = {
-      type: aiResponse.type,
-      sport: aiResponse.sport,
-      team1: aiResponse.team1 || '',
-      team2: aiResponse.team2 || '',
-      line: aiResponse.line || '',
-      odds: aiResponse.odds || -110,
-      stake: parseFloat(aiResponse.stake) || 10
+      type: parsedIntent.bet_type || 'moneyline',
+      sport: parsedIntent.sport || 'NBA',
+      team1: parsedIntent.team || '',
+      team2: parsedIntent.opponent || '',
+      line: parsedIntent.line || '',
+      odds: parsedIntent.odds || -110,
+      stake: parseFloat(parsedIntent.stake) || 10
     };
 
     return {
       type: 'action',
-      content: `Would you like to place a ${betData.type} bet on ${betData.sport}?`,
+      content: `Would you like to place a ${betData.type} bet on ${betData.team1}?`,
       tool_calls: [{
         name: 'place_bet',
         ...betData
@@ -83,7 +279,6 @@ export async function analyzeConversation(messages) {
  */
 export async function handleAction(action, userId, token = null) {
   try {
-    // We don't need to check isAuthenticated() here since the API route already verifies the token
     switch (action.name) {
       case 'add_tokens':
         return await addTokens(userId, action.amount);
@@ -128,6 +323,8 @@ export async function handleAction(action, userId, token = null) {
         }
         
         return await submitBet(betData, token);
+      case 'basketball_query':
+        return await handleBasketballQuery(action.query);
       default:
         return {
           success: false,
@@ -152,9 +349,3 @@ export async function handleAction(action, userId, token = null) {
     };
   }
 }
-
-// Message analyzer
-// - Determines if message needs action
-// - Types: 'direct' (no confirmation), 'action' (needs confirmation), 'normal'
-// - Currently handles: balance checks (direct)
-// - Extensible for new actions 
