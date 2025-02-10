@@ -77,127 +77,106 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
   }, [betSlip.stake, betSlip.odds]);
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl p-3 md:p-4 w-full md:max-w-md mx-auto border border-gray-700">
-      <div className="text-lg font-bold text-center mb-4 bg-gradient-to-r from-blue-600 to-blue-400 text-white py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg">
-        🎯 <span className="tracking-wide">BET SLIP</span>
+    <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl p-3 w-full md:max-w-md mx-auto border border-gray-700">
+      <div className="text-sm font-bold text-center mb-3 bg-gradient-to-r from-blue-600 to-blue-400 text-white py-2 rounded-xl flex items-center justify-center gap-2 shadow-lg">
+        🎯 <span className="tracking-wide">PLACE BET</span>
       </div>
       
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Type and Sport Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="relative group">
-            <label className="block text-xs font-medium text-blue-400 mb-1">Type</label>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Type, Sport, and Line Row */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-1">
             <select
               value={betSlip.type}
               onChange={(e) => setBetSlip({...betSlip, type: e.target.value})}
-              className="block w-full rounded-lg bg-gray-800 border-gray-600 text-white p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
             >
-              <option value="">Select Type</option>
+              <option value="">Type</option>
               {BET_TYPES.map(type => (
-                <option 
-                  key={type} 
-                  value={type}
-                  selected={betSlip.type === type}
-                >
-                  {type}
-                </option>
+                <option key={type} value={type}>{type}</option>
               ))}
             </select>
           </div>
-          <div className="relative group">
-            <label className="block text-xs font-medium text-blue-400 mb-1">Sport</label>
+          <div className="col-span-1">
             <select
               value={betSlip.sport}
               onChange={(e) => setBetSlip({...betSlip, sport: e.target.value})}
-              className="block w-full rounded-lg bg-gray-800 border-gray-600 text-white p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
             >
-              <option value="">Select Sport</option>
+              <option value="">Sport</option>
               {SPORTS.map(sport => (
-                <option 
-                  key={sport} 
-                  value={sport}
-                  selected={betSlip.sport === sport}
-                >
-                  {sport}
-                </option>
+                <option key={sport} value={sport}>{sport}</option>
               ))}
             </select>
           </div>
-        </div>
-
-        {/* Matchup Section */}
-        <div className="bg-gray-800 rounded-lg p-3">
-          <h3 className="font-semibold text-blue-400 mb-2 text-xs uppercase tracking-wider">Matchup</h3>
-          <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
-            <input
-              type="text"
-              value={betSlip.team1}
-              onChange={(e) => setBetSlip({...betSlip, team1: e.target.value})}
-              placeholder="Team 1"
-              className="block w-full rounded-lg bg-gray-900 border-gray-700 text-white p-2 text-sm md:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
-            />
-            <span className="text-xs font-bold text-gray-400 bg-gray-900 px-3 py-1 rounded-full border border-gray-700">
-              VS
-            </span>
-            <input
-              type="text"
-              value={betSlip.team2}
-              onChange={(e) => setBetSlip({...betSlip, team2: e.target.value})}
-              placeholder="Team 2"
-              className="block w-full rounded-lg bg-gray-900 border-gray-700 text-white p-2 text-sm md:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-500"
-            />
-          </div>
-        </div>
-
-        {/* Line, Odds, Stake, Payout Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-blue-400 mb-1">Line</label>
+          <div className="col-span-1">
             <input
               type="text"
               value={betSlip.line}
               onChange={(e) => setBetSlip({...betSlip, line: e.target.value})}
               disabled={betSlip.type === 'Moneyline'}
-              className={`block w-full rounded-lg bg-gray-800 border-gray-600 text-white p-2 text-sm md:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+              placeholder="Line"
+              className={`block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
                 betSlip.type === 'Moneyline' ? 'cursor-not-allowed opacity-75' : ''
               }`}
             />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-blue-400 mb-1">Odds</label>
+        </div>
+
+        {/* Teams Row */}
+        <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
+          <input
+            type="text"
+            value={betSlip.team1}
+            onChange={(e) => setBetSlip({...betSlip, team1: e.target.value})}
+            placeholder="Team 1"
+            className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+          <span className="text-xs font-bold text-gray-400 bg-gray-900/50 px-2 py-1 rounded-full border border-gray-700/50">
+            VS
+          </span>
+          <input
+            type="text"
+            value={betSlip.team2}
+            onChange={(e) => setBetSlip({...betSlip, team2: e.target.value})}
+            placeholder="Team 2"
+            className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+          />
+        </div>
+
+        {/* Odds, Stake, Payout Row */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-1">
             <input
               type="text"
               value={betSlip.odds}
               onChange={(e) => setBetSlip({...betSlip, odds: e.target.value})}
-              className="block w-full rounded-lg bg-gray-800 border-gray-600 text-white p-2 text-sm md:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-              placeholder="-110"
+              placeholder="Odds (-110)"
+              className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
             />
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-blue-400 mb-1">Stake ($)</label>
+          <div className="col-span-1">
             <input
               type="number"
               value={betSlip.stake}
               onChange={(e) => setBetSlip({...betSlip, stake: e.target.value})}
-              className="block w-full rounded-lg bg-gray-800 border-gray-600 text-white p-2 text-sm md:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              placeholder="Stake ($)"
+              className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
             />
           </div>
-          <div>
-            <label className="block text-xs font-medium text-blue-400 mb-1">Potential Payout ($)</label>
+          <div className="col-span-1">
             <input
               type="text"
-              value={betSlip.payout}
+              value={`$${betSlip.payout}`}
               disabled
-              className="block w-full rounded-lg bg-gray-900 border-gray-700 text-green-400 p-2 text-sm font-medium cursor-not-allowed"
+              placeholder="Payout"
+              className="block w-full rounded-lg bg-gray-900/50 border-gray-700/50 text-green-400 p-1.5 text-sm font-medium cursor-not-allowed"
             />
           </div>
         </div>
 
         {error && (
-          <div className="text-red-400 text-sm mt-2 text-center">
+          <div className="text-red-400 text-xs text-center">
             {error}
           </div>
         )}
@@ -206,11 +185,11 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`w-full py-3 bg-gradient-to-r ${
+          className={`w-full py-2 bg-gradient-to-r ${
             isSubmitting 
               ? 'from-gray-500 to-gray-400 cursor-not-allowed'
               : 'from-green-500 to-green-400 hover:from-green-400 hover:to-green-300'
-          } text-white rounded-lg transform hover:scale-[1.02] transition-all duration-200 font-medium shadow-lg hover:shadow-xl`}
+          } text-white text-sm rounded-lg transform hover:scale-[1.02] transition-all duration-200 font-medium shadow-lg hover:shadow-xl`}
         >
           {isSubmitting ? 'Placing Bet...' : 'Place Bet'}
         </button>

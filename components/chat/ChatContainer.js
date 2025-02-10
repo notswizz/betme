@@ -3,12 +3,14 @@ import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import NewChatButton from './NewChatButton';
 import TokenBalance from '../wallet/TokenBalance';
+import Scoreboard from '../scoreboard/Scoreboard';
 import { isAuthenticated } from '@/utils/auth';
 
 export default function ChatContainer() {
   const [messages, setMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
 
   const startNewChat = () => {
     setMessages([]);
@@ -61,12 +63,6 @@ export default function ChatContainer() {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      // Add error message
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: 'Sorry, there was an error processing your message.',
-        type: 'text'
-      }]);
     } finally {
       setLoading(false);
     }
@@ -87,46 +83,65 @@ export default function ChatContainer() {
         return;
       }
 
-      // Log for debugging
-      console.log('Confirming action with token:', token);
-      console.log('Action data:', action);
-
-      // Format bet data if this is a bet action
-      let confirmAction = action;
+      // Handle bet placement directly if it's a bet action
       if (action.name === 'place_bet') {
-        // Parse numeric values
-        const stake = parseFloat(action.stake);
-        const odds = parseInt(action.odds);
-        const payout = parseFloat(action.payout);
+        try {
+          const result = await fetch('/api/bets/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              type: action.type,
+              sport: action.sport,
+              team1: action.team1,
+              team2: action.team2,
+              line: action.line,
+              odds: parseInt(action.odds),
+              stake: parseFloat(action.stake),
+              payout: parseFloat(action.payout)
+            })
+          });
 
-        confirmAction = {
-          name: 'place_bet',
-          type: action.type,
-          sport: action.sport,
-          team1: action.team1,
-          team2: action.team2,
-          line: action.line,
-          odds: odds,
-          stake: stake,
-          payout: payout
-        };
+          const data = await result.json();
+
+          if (!result.ok) {
+            throw new Error(data.message || 'Failed to place bet');
+          }
+
+          // Add success message with bet details
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            type: 'bet_success',
+            content: data.bet
+          }]);
+          return;
+        } catch (error) {
+          console.error('Error placing bet:', error);
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: error.message || 'Failed to place bet. Please try again.',
+            type: 'text'
+          }]);
+          return;
+        }
       }
 
-      // Send all actions through chat process
-      const response = await fetch(window.location.origin + '/api/chat/process', {
+      // Handle other actions through chat process
+      const response = await fetch('/api/chat/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          confirmAction,
+          confirmAction: action,
           conversationId: conversationId
         })
       });
       
       const data = await response.json();
-      console.log('Action response:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to confirm action');
@@ -158,80 +173,100 @@ export default function ChatContainer() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full bg-gradient-to-br from-gray-900 to-gray-800">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:block w-72 border-r border-gray-700 bg-gray-800/50 backdrop-blur-sm overflow-y-auto">
-        <div className="p-6">
-          <NewChatButton onClick={startNewChat} />
+    <div className="relative flex h-full">
+      {/* Mobile Menu Toggle Button */}
+      <button 
+        onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center shadow-lg border border-gray-700"
+      >
+        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Side Menu - Hidden on mobile by default, shown when isSideMenuOpen is true */}
+      <div className={`fixed md:relative md:flex flex-col w-64 h-full bg-gray-900 border-r border-gray-800 p-4 space-y-4 transition-transform duration-300 ease-in-out z-40
+                      ${isSideMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
+                      md:translate-x-0`}>
+        <div className="flex-1 space-y-4">
           <TokenBalance />
+          <NewChatButton onClick={startNewChat} />
         </div>
-      </div>
-      
-      {/* Mobile header - just shows menu button */}
-      <div className="md:hidden flex items-center p-4 border-b border-gray-700 bg-gray-800/50">
-        <button 
-          onClick={() => document.getElementById('mobile-sidebar').classList.toggle('hidden')}
-          className="p-2 text-white hover:bg-gray-700 rounded-lg"
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
       </div>
 
-      {/* Mobile sidebar - includes both NewChatButton and TokenBalance */}
-      <div id="mobile-sidebar" className="hidden fixed inset-0 z-50 md:hidden">
+      {/* Overlay for mobile menu */}
+      {isSideMenuOpen && (
         <div 
-          className="absolute inset-0 bg-black/50" 
-          onClick={() => document.getElementById('mobile-sidebar').classList.add('hidden')}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 md:hidden"
+          onClick={() => setIsSideMenuOpen(false)}
         />
-        <div className="absolute left-0 top-0 w-72 h-full bg-gray-800 shadow-lg flex flex-col">
-          {/* Sidebar Header */}
-          <div className="p-4 border-b border-gray-700 flex justify-between items-center">
-            <h2 className="text-white font-semibold">Menu</h2>
-            <button 
-              onClick={() => document.getElementById('mobile-sidebar').classList.add('hidden')}
-              className="p-2 text-gray-400 hover:text-white"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Sidebar Content */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6 space-y-6">
-              <NewChatButton 
-                onClick={() => {
-                  startNewChat();
-                  document.getElementById('mobile-sidebar').classList.add('hidden');
-                }} 
-              />
-              <div className="border-t border-gray-700 pt-6">
-                <TokenBalance />
+      )}
+
+      {/* Main Chat Area */}
+      <div className="flex-1 flex flex-col h-full">
+        {/* Messages Section */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col">
+              <div className="w-full mt-12">
+                <Scoreboard />
+                <div className="mt-12 grid grid-cols-2 gap-3 max-w-2xl mx-auto px-4">
+                  <button
+                    onClick={() => handleSendMessage("I want to place a bet")}
+                    className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-blue-400 group-hover:text-blue-300">🎯</span>
+                      Place a Bet
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleSendMessage("Show me today's NBA scores")}
+                    className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-blue-400 group-hover:text-blue-300">🏀</span>
+                      Check Scores
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleSendMessage("What are the best odds right now?")}
+                    className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-blue-400 group-hover:text-blue-300">📊</span>
+                      Best Odds
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleSendMessage("What's my token balance?")}
+                    className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-blue-400 group-hover:text-blue-300">💰</span>
+                      Check Balance
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 md:space-y-6 scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-gray-800">
-          {messages.map((message, index) => (
-            <div key={index} className="w-full transform transition-all duration-200 hover:scale-[1.01]">
-              <ChatMessage 
-                message={message}
+          ) : (
+            messages.map((msg, index) => (
+              <ChatMessage
+                key={index}
+                message={msg}
                 onConfirmAction={handleConfirmAction}
-                onCancelAction={handleCancelAction}
+                onCancelAction={() => {
+                  setMessages(prev => prev.slice(0, -1));
+                }}
               />
-            </div>
-          ))}
+            ))
+          )}
         </div>
-        
-        <div className="border-t border-gray-700 bg-gray-800/50 backdrop-blur-sm p-2 md:p-4">
-          <ChatInput
+
+        {/* Input Section */}
+        <div className="p-4 bg-gray-900/50 border-t border-gray-800">
+          <ChatInput 
             onSendMessage={handleSendMessage}
             disabled={loading}
           />

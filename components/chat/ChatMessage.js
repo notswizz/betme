@@ -59,75 +59,76 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
 
   // Handle successful bet message
   if (message.role === 'assistant' && message.type === 'bet_success') {
-    // Parse the content if it's a string
     const betData = typeof message.content === 'string' ? JSON.parse(message.content) : message.content;
     return (
-      <div className="mb-4 md:mb-6">
+      <div className="mb-3">
         <div className={`flex justify-start items-start space-x-3`}>
-          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-            <span className="text-white text-sm md:text-base font-medium">AI</span>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+            <span className="text-white text-sm font-medium">AI</span>
           </div>
-          <div className="max-w-[90%] md:max-w-[75%] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 text-white shadow-xl border border-gray-700/10">
-            <div className="p-4 md:p-5">
-              <div className="flex items-center gap-2 mb-3">
+          <div className="flex-1 max-w-[320px] rounded-2xl bg-gradient-to-br from-gray-800/80 to-gray-900/80 text-white shadow-xl border border-gray-700/30 backdrop-blur-sm">
+            <div className="p-3 space-y-2">
+              {/* Success Header */}
+              <div className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium text-green-400">Bet Placed Successfully!</span>
               </div>
               
-              <div className="space-y-4">
-                {/* Bet Details Section */}
-                <div className="bg-white/5 rounded-xl p-4 backdrop-blur-sm">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-xs text-gray-400 mb-1">Type</div>
-                      <div className="font-medium text-white">{betData.type}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-400 mb-1">Sport</div>
-                      <div className="font-medium text-white">{betData.sport}</div>
-                    </div>
+              {/* Main Bet Info */}
+              <div className="bg-gray-900/50 rounded-xl p-3 space-y-3">
+                {/* Type & Sport */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-gray-500">Type</div>
+                    <div className="text-sm font-medium text-white">{betData.type}</div>
                   </div>
-                  
-                  <div className="mt-3">
-                    <div className="text-xs text-gray-400 mb-1">Matchup</div>
-                    <div className="font-medium text-white flex items-center gap-2">
-                      <span>{betData.team1}</span>
-                      <span className="text-xs px-2 py-1 rounded-full bg-white/10">VS</span>
-                      <span>{betData.team2}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <div>
-                      <div className="text-xs text-gray-400 mb-1">Line</div>
-                      <div className="font-medium text-white">{betData.line}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-400 mb-1">Odds</div>
-                      <div className="font-medium text-white">{betData.odds}</div>
-                    </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Sport</div>
+                    <div className="text-sm font-medium text-white">{betData.sport}</div>
                   </div>
                 </div>
 
-                {/* Stake and Payout Section */}
-                <div className="bg-white/5 rounded-xl p-4 backdrop-blur-sm">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-xs text-gray-400 mb-1">Your Stake</div>
-                      <div className="text-lg font-semibold text-white">${parseFloat(betData.stake).toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-400 mb-1">Potential Payout</div>
-                      <div className="text-lg font-semibold text-green-400">${betData.payout}</div>
-                    </div>
+                {/* Matchup */}
+                <div>
+                  <div className="text-xs text-gray-500">Matchup</div>
+                  <div className="text-sm font-medium text-white flex items-center gap-2">
+                    <span>{betData.team1}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800">VS</span>
+                    <span>{betData.team2}</span>
                   </div>
                 </div>
 
-                {/* Bet ID Section */}
-                <div className="bg-white/5 rounded-xl p-3 backdrop-blur-sm">
-                  <div className="text-xs text-gray-400 mb-1">Bet ID</div>
-                  <div className="font-mono text-sm text-gray-300">{betData._id}</div>
+                {/* Line & Odds */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-gray-500">Line</div>
+                    <div className="text-sm font-medium text-white">{betData.line}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Odds</div>
+                    <div className="text-sm font-medium text-white">{betData.odds}</div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Stake & Payout */}
+              <div className="bg-gray-900/50 rounded-xl p-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-gray-500">Your Stake</div>
+                    <div className="text-base font-semibold text-white">${parseFloat(betData.stake).toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-gray-500">Potential Payout</div>
+                    <div className="text-base font-semibold text-green-400">${betData.payout}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bet ID */}
+              <div className="bg-gray-900/50 rounded-xl p-2">
+                <div className="text-xs text-gray-500">Bet ID</div>
+                <div className="font-mono text-xs text-gray-400 truncate">{betData._id}</div>
               </div>
             </div>
           </div>
