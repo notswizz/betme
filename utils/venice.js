@@ -9,7 +9,22 @@ export async function generateAIResponse(messages) {
     },
     body: JSON.stringify({
       model: "llama-3.3-70b",
-      messages: messages,
+      messages: [
+        {
+          role: "system",
+          content: `You are a sports betting assistant. Help users place bets and understand betting odds.
+          When a user wants to place a bet, extract the following information:
+          - Bet type (Spread, Moneyline, Over/Under, etc)
+          - Sport
+          - Teams involved
+          - Stake amount
+          - Odds
+          - Line (if applicable)
+          
+          Format betting advice clearly and help users understand potential payouts.`
+        },
+        ...messages
+      ],
       temperature: 0.1
     })
   };

@@ -1,22 +1,19 @@
 import mongoose from 'mongoose';
 
 // Define the schema
-const userSchema = new mongoose.Schema({
+const UserSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true
+    required: true,
+    unique: true
   },
   password: {
     type: String,
-    required: [true, 'Password is required']
+    required: true
   },
   tokenBalance: {
     type: Number,
-    default: 0,
-    min: [0, 'Token balance cannot be negative']
+    default: 0
   },
   createdAt: {
     type: Date,
@@ -25,6 +22,4 @@ const userSchema = new mongoose.Schema({
 });
 
 // Prevent mongoose from creating the model multiple times
-const User = mongoose.models.User || mongoose.model('User', userSchema);
-
-export default User; 
+export default mongoose.models.User || mongoose.model('User', UserSchema); 

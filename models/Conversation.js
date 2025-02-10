@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const messageSchema = new mongoose.Schema({
+const MessageSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
@@ -10,29 +10,31 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  requiresConfirmation: {
-    type: Boolean,
-    default: false
-  },
-  action: {
-    type: mongoose.Schema.Types.Mixed,
-    default: null
-  }
-});
-
-const conversationSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  messages: [messageSchema],
-  createdAt: {
+  timestamp: {
     type: Date,
     default: Date.now
   }
 });
 
-const Conversation = mongoose.models.Conversation || mongoose.model('Conversation', conversationSchema);
+const ConversationSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  messages: [MessageSchema],
+  active: {
+    type: Boolean,
+    default: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
 
-export default Conversation; 
+export default mongoose.models.Conversation || mongoose.model('Conversation', ConversationSchema); 

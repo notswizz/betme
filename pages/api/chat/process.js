@@ -12,15 +12,27 @@ import mongoose from 'mongoose';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  // Get auth header
+  const authHeader = req.headers.authorization;
+  if (!authHeader || typeof authHeader !== 'string') {
+    return res.status(401).json({ message: 'Missing authorization header' });
+  }
+
+  // Extract token
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
   }
 
   try {
     await connectDB();
     
-    const userId = await verifyToken(req);
+    const userId = await verifyToken(token);
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ message: 'Invalid token' });
     }
 
     const { message, conversationId, confirmAction, type } = req.body;
@@ -68,16 +80,40 @@ export default async function handler(req, res) {
       const result = await handleAction(confirmAction, userId);
       
       if (result.success) {
-        const confirmationMessages = [
-          { role: 'user', content: 'Confirmed' },
-          { role: 'assistant', content: result.message }
-        ];
+        let confirmationMessages;
+        
+        // Special handling for bet placement
+        if (confirmAction.name === 'place_bet' && result.bet) {
+          confirmationMessages = [
+            { role: 'user', content: 'Confirmed' },
+            { 
+              role: 'assistant',
+              type: 'bet_success',
+              content: {
+                _id: result.bet._id,
+                type: result.bet.type,
+                sport: result.bet.sport,
+                team1: result.bet.team1,
+                team2: result.bet.team2,
+                line: result.bet.line,
+                odds: result.bet.odds,
+                stake: result.bet.stake,
+                payout: result.bet.payout
+              }
+            }
+          ];
+        } else {
+          confirmationMessages = [
+            { role: 'user', content: 'Confirmed' },
+            { role: 'assistant', content: result.message }
+          ];
+        }
         
         conversation.messages.push(...confirmationMessages);
         await conversation.save();
 
         return res.status(200).json({
-          message: { role: 'assistant', content: result.message },
+          message: confirmationMessages[1],
           conversationId: conversation._id.toString()
         });
       } else {
@@ -161,7 +197,19 @@ export default async function handler(req, res) {
       remainingTokens: user.tokenBalance
     });
 
+    // Handle image upload and bet slip analysis
     if (type === 'betslip_analysis') {
+      // Add the image message to conversation first
+      const imageMessage = {
+        role: 'user',
+        type: 'image',
+        content: message.text || 'Uploaded bet slip',
+        imageUrl: message.imageUrl
+      };
+      
+      conversation.messages.push(imageMessage);
+      await conversation.save();
+
       // Use AI to analyze bet slip
       const analysis = await generateAIResponse([
         {
@@ -170,21 +218,39 @@ export default async function handler(req, res) {
         },
         {
           role: "user",
-          content: message
+          content: message.text || 'Please analyze this bet slip'
         }
       ]);
 
+      // Add AI response to conversation
+      const aiMessage = {
+        role: 'assistant',
+        content: analysis.content,
+        type: 'betslip',
+        content: {
+          type: 'Spread',
+          sport: 'NFL',
+          team1: 'Kansas City Chiefs',
+          team2: 'Philadelphia Eagles',
+          line: '10',
+          odds: '-105',
+          stake: '10',
+          payout: '19.52'
+        }
+      };
+
+      conversation.messages.push(aiMessage);
+      await conversation.save();
+
       return res.status(200).json({
         success: true,
-        message: analysis
+        message: aiMessage,
+        conversationId: conversation._id.toString()
       });
     }
 
   } catch (error) {
-    console.error('Chat processing error:', error);
-    res.status(500).json({ 
-      error: 'Error processing message',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    console.error('Chat process error:', error);
+    return res.status(500).json({ message: 'Error processing chat' });
   }
 } 

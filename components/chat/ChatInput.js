@@ -2,6 +2,7 @@ import { useState } from 'react';
 import ImageUpload from './ImageUpload';
 import { extractText } from '@/utils/tesseract';
 import { generateAIResponse } from '@/utils/venice';
+import { FaCamera } from 'react-icons/fa';
 
 export default function ChatInput({ onSendMessage, disabled }) {
   const [message, setMessage] = useState('');
@@ -128,32 +129,38 @@ Text: ${extractedText}`
   }
 
   return (
-    <div className="border-t p-2 md:p-4 bg-gradient-to-b from-white to-gray-50 shadow-inner">
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 md:gap-3 max-w-4xl mx-auto">
-        <ImageUpload 
-          onUpload={handleImageUpload}
-          disabled={disabled || processing}
-          className="hover:opacity-80 transition-opacity"
-        />
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder={processing ? "Processing..." : "Type a message..."}
-          disabled={disabled || processing}
-          className="flex-1 p-2 md:p-3 text-sm md:text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 text-gray-600 shadow-sm"
-        />
-        <button
-          type="submit"
-          disabled={disabled || processing || !message.trim()}
-          className={`px-4 md:px-6 py-2 md:py-3 rounded-xl font-medium ${
-            disabled || processing || !message.trim()
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:scale-95'
-          } text-white transition-all duration-200 shadow-md hover:shadow-lg text-sm md:text-base`}
-        >
-          Send
-        </button>
+    <div className="border-t p-2 bg-gradient-to-b from-white to-gray-50 shadow-inner">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-4xl mx-auto">
+        <div className="flex items-center gap-2">
+          <ImageUpload 
+            onUpload={handleImageUpload}
+            disabled={disabled || processing}
+            className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+            icon={<FaCamera className="w-4 h-4 text-gray-600" />}
+          />
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder={processing ? "Processing..." : "Type a message..."}
+            disabled={disabled || processing}
+            className="flex-1 p-2.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 text-gray-600 shadow-sm"
+          />
+        </div>
+        
+        {message.trim() && (
+          <button
+            type="submit"
+            disabled={disabled || processing}
+            className={`w-full p-2.5 rounded-xl font-medium ${
+              disabled || processing
+                ? 'bg-gray-300 cursor-not-allowed'
+                : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:scale-95'
+            } text-white transition-all duration-200 shadow-md hover:shadow-lg text-base`}
+          >
+            Send
+          </button>
+        )}
       </form>
     </div>
   );

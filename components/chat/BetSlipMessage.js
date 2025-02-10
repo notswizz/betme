@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { submitBet } from '../../utils/betSubmission';
 
 const SPORTS = [
   "NBA", "NFL", "MLB", "NHL", "Soccer", "UFC", "Boxing", "Tennis", "Golf", "E-Sports"
@@ -10,10 +11,36 @@ const BET_TYPES = [
 
 export default function BetSlipMessage({ initialData, onSubmit }) {
   const [betSlip, setBetSlip] = useState(initialData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(betSlip);
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await submitBet(betSlip);
+      onSubmit({
+        role: 'assistant',
+        type: 'bet_success',
+        content: {
+          _id: result.bet._id,
+          type: result.bet.type,
+          sport: result.bet.sport,
+          team1: result.bet.team1,
+          team2: result.bet.team2,
+          line: result.bet.line,
+          odds: result.bet.odds,
+          stake: result.bet.stake,
+          payout: result.bet.payout
+        }
+      });
+    } catch (err) {
+      setError('Failed to place bet. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Calculate potential payout whenever stake or odds change
@@ -155,12 +182,23 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
           </div>
         </div>
 
+        {error && (
+          <div className="text-red-400 text-sm mt-2 text-center">
+            {error}
+          </div>
+        )}
+
         {/* Submit Button */}
         <button
           type="submit"
-          className="w-full py-3 bg-gradient-to-r from-green-500 to-green-400 text-white rounded-lg hover:from-green-400 hover:to-green-300 transform hover:scale-[1.02] transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+          disabled={isSubmitting}
+          className={`w-full py-3 bg-gradient-to-r ${
+            isSubmitting 
+              ? 'from-gray-500 to-gray-400 cursor-not-allowed'
+              : 'from-green-500 to-green-400 hover:from-green-400 hover:to-green-300'
+          } text-white rounded-lg transform hover:scale-[1.02] transition-all duration-200 font-medium shadow-lg hover:shadow-xl`}
         >
-          Place Bet
+          {isSubmitting ? 'Placing Bet...' : 'Place Bet'}
         </button>
       </form>
     </div>

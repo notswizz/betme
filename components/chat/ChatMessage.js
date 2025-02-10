@@ -57,6 +57,84 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
     );
   }
 
+  // Handle successful bet message
+  if (message.role === 'assistant' && message.type === 'bet_success') {
+    const betData = message.content;
+    return (
+      <div className="mb-4 md:mb-6">
+        <div className={`flex justify-start items-start space-x-3`}>
+          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+            <span className="text-white text-sm md:text-base font-medium">AI</span>
+          </div>
+          <div className="max-w-[90%] md:max-w-[75%] rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 text-white shadow-xl border border-gray-700/10">
+            <div className="p-4 md:p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-green-400">Bet Placed Successfully!</span>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Bet Details Section */}
+                <div className="bg-white/5 rounded-xl p-4 backdrop-blur-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">Type</div>
+                      <div className="font-medium text-white">{betData.type}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">Sport</div>
+                      <div className="font-medium text-white">{betData.sport}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3">
+                    <div className="text-xs text-gray-400 mb-1">Matchup</div>
+                    <div className="font-medium text-white flex items-center gap-2">
+                      <span>{betData.team1}</span>
+                      <span className="text-xs px-2 py-1 rounded-full bg-white/10">VS</span>
+                      <span>{betData.team2}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">Line</div>
+                      <div className="font-medium text-white">{betData.line}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">Odds</div>
+                      <div className="font-medium text-white">{betData.odds}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stake and Payout Section */}
+                <div className="bg-white/5 rounded-xl p-4 backdrop-blur-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">Your Stake</div>
+                      <div className="text-lg font-semibold text-white">${parseFloat(betData.stake).toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-400 mb-1">Potential Payout</div>
+                      <div className="text-lg font-semibold text-green-400">${betData.payout}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bet ID Section */}
+                <div className="bg-white/5 rounded-xl p-3 backdrop-blur-sm">
+                  <div className="text-xs text-gray-400 mb-1">Bet ID</div>
+                  <div className="font-mono text-sm text-gray-300">{betData._id}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Handle image preview
   if (message.type === 'image') {
     return (
@@ -130,30 +208,93 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
   // Handle confirmation messages
   if (message.requiresConfirmation) {
     return (
-      <div className="mb-2 md:mb-4">
-        <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start space-x-2`}>
+      <div className="mb-4 md:mb-6">
+        <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start space-x-3`}>
           {!isUser && (
-            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xs md:text-sm">AI</span>
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+              <span className="text-white text-sm md:text-base font-medium">AI</span>
             </div>
           )}
-          <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl p-3 md:p-4 ${
+          <div className={`max-w-[90%] md:max-w-[75%] rounded-2xl ${
             isUser 
-              ? 'bg-blue-600 text-white' 
-              : 'bg-white text-gray-800 shadow-md'
-          }`}>
-            {formatContent(content)}
-            <div className="mt-2">
-              <ActionConfirmation 
-                action={message.action}
-                onConfirm={() => onConfirmAction(message.action)}
-                onCancel={onCancelAction}
-              />
+              ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white' 
+              : 'bg-gradient-to-br from-gray-50 to-white text-gray-800'
+          } shadow-xl border border-gray-700/10`}>
+            <div className="p-4 md:p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-green-400">Bet Confirmation</span>
+              </div>
+              
+              <div className="space-y-4">
+                {/* Bet Details Section */}
+                <div className="bg-black/10 rounded-xl p-4 backdrop-blur-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs opacity-70 mb-1">Type</div>
+                      <div className="font-medium">{message.action.type}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs opacity-70 mb-1">Sport</div>
+                      <div className="font-medium">{message.action.sport}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-3">
+                    <div className="text-xs opacity-70 mb-1">Matchup</div>
+                    <div className="font-medium flex items-center gap-2">
+                      <span>{message.action.team1}</span>
+                      <span className="text-xs px-2 py-1 rounded-full bg-black/20">VS</span>
+                      <span>{message.action.team2}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs opacity-70 mb-1">Line</div>
+                      <div className="font-medium">{message.action.line}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs opacity-70 mb-1">Odds</div>
+                      <div className="font-medium">{message.action.odds}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stake and Payout Section */}
+                <div className="bg-black/10 rounded-xl p-4 backdrop-blur-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs opacity-70 mb-1">Your Stake</div>
+                      <div className="text-lg font-semibold">${parseFloat(message.action.stake).toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs opacity-70 mb-1">Potential Payout</div>
+                      <div className="text-lg font-semibold text-green-400">${message.action.payout}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex gap-2">
+                <button
+                  onClick={() => onConfirmAction(message.action)}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-400 text-white rounded-lg hover:from-green-400 hover:to-green-300 transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                >
+                  Confirm Bet
+                </button>
+                <button
+                  onClick={onCancelAction}
+                  className="px-4 py-2 bg-gradient-to-r from-gray-700 to-gray-600 text-white rounded-lg hover:from-gray-600 hover:to-gray-500 transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
           {isUser && (
-            <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xs md:text-sm">You</span>
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center flex-shrink-0 shadow-lg">
+              <span className="text-white text-sm md:text-base font-medium">You</span>
             </div>
           )}
         </div>
