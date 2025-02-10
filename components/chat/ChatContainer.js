@@ -46,7 +46,10 @@ export default function ChatContainer() {
       // Debug logging
       console.log('Sending message:', userMessage);
       
-      setMessages(prev => [...prev, userMessage]);
+      // Only add user message to UI if it's not a betslip
+      if (userMessage.type !== 'betslip') {
+        setMessages(prev => [...prev, userMessage]);
+      }
 
       // Get auth token
       const token = localStorage.getItem('token');
@@ -85,11 +88,23 @@ export default function ChatContainer() {
 
       // Handle multiple messages in response
       if (Array.isArray(data.messages)) {
-        setMessages(prev => [...prev, ...data.messages]);
+        setMessages(prev => {
+          // Filter out any "Analyzing bet slip..." messages
+          const filteredPrev = prev.filter(msg => 
+            !(msg.type === 'image' && msg.content === 'Analyzing bet slip...')
+          );
+          return [...filteredPrev, ...data.messages];
+        });
       } 
       // Handle single message response
       else if (data.message) {
-        setMessages(prev => [...prev, data.message]);
+        setMessages(prev => {
+          // Filter out any "Analyzing bet slip..." messages
+          const filteredPrev = prev.filter(msg => 
+            !(msg.type === 'image' && msg.content === 'Analyzing bet slip...')
+          );
+          return [...filteredPrev, data.message];
+        });
       }
 
     } catch (error) {
@@ -238,7 +253,7 @@ export default function ChatContainer() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full relative overflow-hidden">
         {/* Messages Section */}
-        <div className="flex-1 overflow-y-auto pt-14 pb-20 overscroll-none">
+        <div className="flex-1 overflow-y-auto pt-20 pb-20 overscroll-none">
           <div className="w-full max-w-4xl mx-auto px-4">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col justify-center -mt-16">

@@ -58,7 +58,8 @@ Remember to always be helpful and clear in your responses!`
         },
         ...messages
       ],
-      temperature: 0.1
+      temperature: 0.1,
+      max_tokens: 500
     })
   };
 
@@ -69,16 +70,35 @@ Remember to always be helpful and clear in your responses!`
     // Debug the API response
     console.log('Venice API Response:', data);
     
+    // Handle API errors
+    if (data.error) {
+      console.error('Venice API returned error:', data.error);
+      // Return a default chat response instead of throwing
+      return {
+        content: "I apologize, but I'm having trouble processing that right now. Could you try rephrasing your request?",
+        role: "assistant"
+      };
+    }
+
+    // Handle missing or malformed response
     if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('Unexpected API response format:', data);
-      throw new Error('Invalid API response format');
+      // Return a default chat response instead of throwing
+      return {
+        content: "I apologize, but I'm having trouble understanding that. Could you try again?",
+        role: "assistant"
+      };
     }
 
     // Return just the message content
     return data.choices[0].message;
   } catch (error) {
     console.error('Venice API Error:', error);
-    throw new Error('Failed to generate AI response');
+    // Return a default chat response instead of throwing
+    return {
+      content: "I apologize, but I'm having technical difficulties. Please try again in a moment.",
+      role: "assistant"
+    };
   }
 }
 
@@ -93,7 +113,7 @@ export async function extractTextFromImage(imageFile) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      model: "llama-3.3-70b-vision", // Use vision model if available
+      model: "llama-3.3-70b-vision",
       messages: [
         {
           role: "user",
@@ -104,34 +124,52 @@ export async function extractTextFromImage(imageFile) {
             },
             {
               type: "text",
-              text: "Please extract and summarize the text from this image."
+              text: "Please extract and summarize the text from this image, focusing on any betting information."
             }
           ]
         }
-      ]
+      ],
+      max_tokens: 500
     })
   };
 
   try {
     const response = await fetch('https://api.venice.ai/api/v1/chat/completions', options);
     const data = await response.json();
+    
+    // Handle API errors
+    if (data.error) {
+      console.error('Venice API returned error:', data.error);
+      return {
+        content: "I apologize, but I couldn't process the image. Could you try uploading it again?",
+        role: "assistant"
+      };
+    }
+
+    // Handle missing or malformed response
+    if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Unexpected API response format:', data);
+      return {
+        content: "I apologize, but I couldn't read the image properly. Could you try a clearer image?",
+        role: "assistant"
+      };
+    }
+
     return data.choices[0].message;
   } catch (error) {
     console.error('Venice API Error:', error);
-    throw new Error('Failed to extract text from image');
+    return {
+        content: "I apologize, but I'm having trouble processing images right now. Please try again later.",
+        role: "assistant"
+    };
   }
 }
 
-// Helper function to convert File to base64
-function fileToBase64(file) {
+async function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => {
-      // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
-      const base64 = reader.result.split(',')[1];
-      resolve(base64);
-    };
+    reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.onerror = error => reject(error);
   });
 } 

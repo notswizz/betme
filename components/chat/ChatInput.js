@@ -37,7 +37,7 @@ export default function ChatInput({ onSubmit, isLoading }) {
         type: 'image',
         imageUrl,
         content: 'Analyzing bet slip...'
-      }, 'image');
+      });
 
       // 1. Extract text using Tesseract
       const extractedText = await extractText(file);
@@ -48,20 +48,20 @@ export default function ChatInput({ onSubmit, isLoading }) {
         const aiResponse = await generateAIResponse([
           {
             role: "system",
-            content: "You are a sports betting expert. Extract betting information from text and return ONLY a JSON object. Focus on identifying the sport and bet type. Do not include markdown formatting or backticks."
+            content: "You are a sports betting expert. Extract betting information from text and return a JSON object after your explanation. Always format your response as a natural language explanation followed by a single JSON object."
           },
           {
             role: "user",
-            content: `Extract this bet slip data into a clean JSON object:
+            content: `Extract betting information from this text and return a JSON object with these fields:
 {
-  type: "Spread"|"Moneyline"|"Over/Under"|"Parlay"|"Prop"|"Future",
-  sport: "NBA"|"NFL"|"MLB"|"NHL"|"Soccer"|"UFC"|"Boxing"|"Tennis"|"Golf"|"E-Sports",
-  team1: first team name,
-  team2: second team name,
-  line: point spread/total,
-  odds: odds number,
-  pick: selected team,
-  confidence: 0-1
+  "type": "Spread"|"Moneyline"|"Over/Under"|"Parlay"|"Prop"|"Future",
+  "sport": "NBA"|"NFL"|"MLB"|"NHL"|"Soccer"|"UFC"|"Boxing"|"Tennis"|"Golf"|"E-Sports",
+  "team1": "first team name",
+  "team2": "second team name",
+  "line": "point spread/total",
+  "odds": "odds number",
+  "pick": "selected team",
+  "confidence": 0-1
 }
 
 Text: ${extractedText}`
@@ -73,17 +73,21 @@ Text: ${extractedText}`
 
         // Clean and parse the response
         const cleanAndParseJSON = (content) => {
-          if (typeof content !== 'string') return content;
+          if (typeof content !== 'string') return null;
           
-          // Remove markdown formatting if present
-          let cleaned = content.replace(/```json\n|\n```|```/g, '');
+          // Find the last occurrence of a JSON object in the text
+          const jsonMatch = content.match(/\{(?:[^{}]|(\{[^{}]*\}))*\}/g);
+          if (!jsonMatch) return null;
           
-          // Attempt to parse the cleaned JSON
+          // Get the last JSON object (most likely to be the bet data)
+          const lastJson = jsonMatch[jsonMatch.length - 1];
+          
+          // Attempt to parse the JSON
           try {
-            return JSON.parse(cleaned);
+            return JSON.parse(lastJson);
           } catch (e) {
             console.error('JSON Parse Error:', e);
-            console.log('Failed to parse:', cleaned);
+            console.log('Failed to parse:', lastJson);
             return {
               type: 'UNKNOWN',
               sport: 'Unknown',
@@ -97,7 +101,17 @@ Text: ${extractedText}`
           }
         };
 
-        const aiData = cleanAndParseJSON(aiResponse.content);
+        const aiData = cleanAndParseJSON(aiResponse.content) || {
+          type: 'UNKNOWN',
+          sport: 'Unknown',
+          team1: '',
+          team2: '',
+          line: '',
+          odds: '-110',
+          pick: '',
+          confidence: 0
+        };
+        
         console.log('Cleaned AI Data:', aiData);
 
         // Create bet slip with AI-extracted data
@@ -113,15 +127,19 @@ Text: ${extractedText}`
             odds: aiData.odds || '-110',
             pick: aiData.pick || '',
             stake: '10',
-            payout: calculatePayout(10, aiData.odds || -110).toFixed(2),
-            notes: `Confidence: ${(aiData.confidence * 100).toFixed(0)}%\nExtracted: ${extractedText}`
+            payout: calculatePayout(10, aiData.odds || -110).toFixed(2)
           }
         };
 
-        onSubmit(betSlipData, 'betslip');
+        onSubmit(betSlipData);
       }
     } catch (error) {
       console.error('Error processing image:', error);
+      onSubmit({
+        role: 'assistant',
+        type: 'text',
+        content: 'Sorry, I had trouble processing that image. Please try again or enter the bet details manually.'
+      });
     } finally {
       setProcessing(false);
     }

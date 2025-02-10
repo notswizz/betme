@@ -435,7 +435,6 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="text-white font-medium mb-3">Recent Open Bets</h3>
             <OpenBetsView 
               bets={message.content} 
               onPlaceSimilar={(bet) => {

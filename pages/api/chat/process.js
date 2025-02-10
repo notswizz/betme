@@ -176,10 +176,51 @@ export default async function handler(req, res) {
     // Add user message to conversation
     const userMessage = {
       role: 'user',
-      content: typeof message === 'string' ? message : message.content,
+      content: typeof message === 'object' ? 
+        typeof message.content === 'object' ? 
+          JSON.stringify(message.content) : 
+          message.content : 
+        message,
       type: message.type || 'text'
     };
     
+    // Special handling for bet slips and images
+    if (message.type === 'betslip') {
+      const betSlipContent = typeof message.content === 'object' ? 
+        message.content : 
+        JSON.parse(message.content);
+
+      // Add bet slip - ensure content is stringified
+      const betSlipMessage = {
+        role: 'assistant',
+        type: 'betslip',
+        content: JSON.stringify(betSlipContent)
+      };
+      
+      conversation.messages.push(betSlipMessage);
+      await conversation.save();
+
+      return res.status(200).json({
+        message: {
+          ...betSlipMessage,
+          content: betSlipContent // Send as object for UI
+        },
+        conversationId: conversation._id.toString()
+      });
+    }
+    
+    // For images, just save the message and return
+    if (message.type === 'image') {
+      conversation.messages.push(userMessage);
+      await conversation.save();
+      
+      return res.status(200).json({
+        message: userMessage,
+        conversationId: conversation._id.toString()
+      });
+    }
+
+    // For regular messages, continue with normal flow
     conversation.messages.push(userMessage);
 
     // Analyze conversation intent
@@ -218,7 +259,15 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: result.error });
       }
 
-      conversation.messages.push(result.message);
+      // Ensure message content is stringified before saving
+      const messageToSave = {
+        ...result.message,
+        content: typeof result.message.content === 'object' ? 
+          JSON.stringify(result.message.content) : 
+          result.message.content
+      };
+
+      conversation.messages.push(messageToSave);
       await conversation.save();
 
       return res.status(200).json({
@@ -241,91 +290,34 @@ export default async function handler(req, res) {
       // Find JSON object in the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        jsonResponse = JSON.parse(jsonMatch[0]);
-        // Get the conversational part (everything before the JSON)
-        conversationalResponse = content.substring(0, jsonMatch.index).trim();
+        try {
+          jsonResponse = JSON.parse(jsonMatch[0]);
+          // Get the conversational part (everything before the JSON)
+          conversationalResponse = content.substring(0, jsonMatch.index).trim();
+        } catch (e) {
+          console.error('Error parsing JSON from AI response:', e);
+          // Continue with just the conversational response
+          conversationalResponse = content;
+        }
       } else {
         conversationalResponse = content;
       }
     } catch (error) {
-      console.error('Error parsing AI response:', error);
-      conversationalResponse = aiResponse.content;
+      console.error('Error processing AI response:', error);
+      conversationalResponse = aiResponse.content || "I'm not sure how to help with that. Would you like to place a bet, view open bets, or check your balance?";
     }
 
-    // If we have a valid intent, handle it
-    if (jsonResponse && jsonResponse.intent) {
-      let result;
-      
-      switch (jsonResponse.intent) {
-        case 'view_open_bets':
-          result = await getOpenBets(userId);
-          if (result.success) {
-            return res.status(200).json({
-              message: result.message,
-              conversationId: conversation._id.toString()
-            });
-          }
-          break;
-        case 'view_bets':
-          result = await getUserBets(userId);
-          if (result.success) {
-            return res.status(200).json({
-              message: result.message,
-              conversationId: conversation._id.toString()
-            });
-          }
-          break;
-        case 'check_balance':
-          result = {
-            success: true,
-            message: {
-              role: 'assistant',
-              type: 'text',
-              content: `Your current balance is ${user.tokenBalance} tokens.`
-            }
-          };
-          break;
-      }
-
-      if (result && result.success) {
-        // Only add conversational response for non-bet viewing intents
-        if (conversationalResponse && jsonResponse.intent !== 'view_open_bets' && jsonResponse.intent !== 'view_bets') {
-          conversation.messages.push({
-            role: 'assistant',
-            type: 'text',
-            content: conversationalResponse
-          });
-        }
-        
-        // Then add the actual data response
-        conversation.messages.push(result.message);
-        await conversation.save();
-
-        return res.status(200).json({
-          messages: [
-            ...(conversationalResponse && jsonResponse.intent !== 'view_open_bets' && jsonResponse.intent !== 'view_bets' ? [{
-              role: 'assistant',
-              type: 'text',
-              content: conversationalResponse
-            }] : []),
-            result.message
-          ],
-          conversationId: conversation._id.toString()
-        });
-      }
-    }
-
-    // Handle betting intents
+    // First check for betting intent in the JSON response
     if (jsonResponse && jsonResponse.type && jsonResponse.sport) {
       const betSlipContent = {
         type: jsonResponse.type,
         sport: jsonResponse.sport,
-        team1: jsonResponse.team1,
-        team2: jsonResponse.team2,
+        team1: jsonResponse.team1 || '',
+        team2: jsonResponse.team2 || '',
         line: jsonResponse.line || '',
         odds: jsonResponse.odds || '-110',
         stake: jsonResponse.stake || '10',
-        pick: jsonResponse.pick,
+        pick: jsonResponse.pick || '',
         payout: calculatePayout(parseFloat(jsonResponse.stake) || 10, jsonResponse.odds || '-110').toFixed(2)
       };
 
@@ -338,7 +330,7 @@ export default async function handler(req, res) {
         });
       }
 
-      // Add bet slip
+      // Add bet slip - ensure content is stringified
       const betSlipMessage = {
         role: 'assistant',
         type: 'betslip',
@@ -362,6 +354,64 @@ export default async function handler(req, res) {
         ],
         conversationId: conversation._id.toString()
       });
+    }
+    
+    // Then check for viewing intents
+    if (jsonResponse && jsonResponse.intent) {
+      let result;
+      
+      switch (jsonResponse.intent) {
+        case 'view_open_bets':
+          result = await getOpenBets(userId);
+          break;
+        case 'view_bets':
+          result = await getUserBets(userId);
+          break;
+        case 'check_balance':
+          result = {
+            success: true,
+            message: {
+              role: 'assistant',
+              type: 'text',
+              content: `Your current balance is ${user.tokenBalance} tokens.`
+            }
+          };
+          break;
+      }
+
+      if (result && result.success) {
+        // Add conversational response first
+        if (conversationalResponse) {
+          conversation.messages.push({
+            role: 'assistant',
+            type: 'text',
+            content: conversationalResponse
+          });
+        }
+        
+        // Then add the actual data response - ensure content is stringified
+        const messageToSave = {
+          ...result.message,
+          content: typeof result.message.content === 'object' ? 
+            JSON.stringify(result.message.content) : 
+            result.message.content
+        };
+        
+        conversation.messages.push(messageToSave);
+        await conversation.save();
+
+        return res.status(200).json({
+          messages: [
+            ...(conversationalResponse ? [{
+              role: 'assistant',
+              type: 'text',
+              content: conversationalResponse
+            }] : []),
+            result.message
+          ],
+          conversationId: conversation._id.toString()
+        });
+      }
     }
 
     // Default to regular chat response
