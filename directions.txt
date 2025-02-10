@@ -101,7 +101,113 @@ Betting Flow:
 5. User confirms bet
 6. Success confirmation with bet ID and details
 
-### 6. UI Components
+### 6. Sports API Integration
+
+#### API Configuration
+- Provider: RapidAPI Basketball API
+- Base URL: https://api-basketball.p.rapidapi.com
+- League Focus: NBA (League ID: 12)
+- Authentication: API Key via headers
+
+#### Data Structures
+Game Data Format:
+```javascript
+{
+  id: String,
+  league: 'NBA',
+  status: String,  // 'NS', 'LIVE', 'FT', 'HT', etc.
+  quarter: String, // Current quarter or game status
+  timeLeft: String,
+  team1: {
+    name: String,
+    logo: String,
+    score: Number,
+    quarterScores: {
+      q1: Number,
+      q2: Number,
+      q3: Number,
+      q4: Number,
+      ot: Number
+    }
+  },
+  team2: {
+    name: String,
+    logo: String,
+    score: Number,
+    quarterScores: {
+      q1: Number,
+      q2: Number,
+      q3: Number,
+      q4: Number,
+      ot: Number
+    }
+  },
+  venue: String,
+  date: Date
+}
+```
+
+#### Features
+1. Data Caching:
+   - 5-minute cache duration
+   - Cache key format: `games_${date}_${season}`
+   - Automatic cache invalidation
+   - Fallback to cache on rate limits
+
+2. Season Handling:
+   - Dynamic season calculation
+   - Format: "YYYY-YYYY"
+   - Season transition in October
+   - Automatic season detection based on date
+
+3. Date Management:
+   - Timezone handling (America/New_York)
+   - Date normalization to noon
+   - Consistent UTC conversion
+   - Date range selection (±7 days)
+
+4. Rate Limiting:
+   - Header tracking (x-ratelimit-requests-limit)
+   - Remaining requests monitoring
+   - Automatic retry with exponential backoff
+   - Cache fallback on 429 errors
+
+5. Game Status Mapping:
+   ```javascript
+   const statusDisplay = {
+     'NS': 'Not Started',
+     'FT': 'Final',
+     'HT': 'Halftime',
+     'Q1': '1st Quarter',
+     'Q2': '2nd Quarter',
+     'Q3': '3rd Quarter',
+     'Q4': '4th Quarter',
+     'AOT': 'After OT',
+     'POST': 'Postponed'
+   }
+   ```
+
+6. Auto-Refresh Logic:
+   - 30-second intervals for live games
+   - Only active for current day's games
+   - Automatic cleanup on component unmount
+   - Conditional refresh based on game status
+
+7. Error Handling:
+   - API error classification
+   - Rate limit detection
+   - Network error recovery
+   - Invalid data handling
+   - Retry mechanism with backoff
+
+8. Performance Optimization:
+   - Memoized data formatting
+   - Efficient date comparisons
+   - Minimal re-renders
+   - Cached API responses
+   - Optimized data structures
+
+### 7. UI Components
 1. Side Menu:
    - New chat button
    - Token balance
@@ -124,7 +230,7 @@ Betting Flow:
    - Action buttons
    - Scrollable layout
 
-### 7. Error Handling
+### 8. Error Handling
 1. API Errors:
    - Token validation
    - Balance checks
@@ -145,7 +251,7 @@ Betting Flow:
    - Status tracking
    - Line validation for bet types
 
-### 8. State Management
+### 9. State Management
 1. Conversation State:
    - Message history
    - Conversation ID
@@ -167,7 +273,7 @@ Betting Flow:
    - Error messages
    - Optimized updates
 
-### 9. Security
+### 10. Security
 1. Authentication:
    - JWT tokens
    - Token validation
@@ -182,7 +288,7 @@ Betting Flow:
    - Secure endpoints
    - Data validation
 
-### 10. Mobile Optimization
+### 11. Mobile Optimization
 1. Responsive Design:
    - Mobile-first approach
    - Touch-friendly inputs
