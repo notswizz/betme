@@ -1,27 +1,53 @@
 # BetChat Application Architecture and Flow
 
 ## Overview
-BetChat is an AI-powered sports betting assistant that allows users to place bets through a chat interface. The application uses a sophisticated message processing system to understand user intent and handle various actions including betting, balance checks, and listings.
+BetChat is an AI-powered sports betting assistant that allows users to place bets through a chat interface. The application features a modern, gradient-rich UI with smooth animations and mobile-first design.
 
 ## Core Components
 
-### 1. Side Menu
-- `NewChatButton`: Starts a new chat session
-- `TokenBalance`: Shows user's available tokens with add tokens functionality
-- `BetStats`: Displays betting statistics and judging reputation
-  * Total bets, pending, and won bets
-  * Total judged bets with accuracy rate and rank
-- Logout button for session management
+### 1. Side Menu Layout
+The side menu follows a vertical layout with three main sections:
+- Top: New Chat button for starting fresh conversations
+- Middle: Dynamic content area
+  * Token Balance with animated gradient icon and "+" button
+  * BetStats cards showing user statistics
+- Bottom: BetChat branding section
+  * Compact logo and title with minimal spacing
+  * Sits directly against content with 1px padding
+  * Subtle border separator with 50% opacity
 
-### 2. Chat Interface
-- `ChatContainer`: Main component managing the chat flow
-- `ChatMessage`: Renders different message types (text, bet slips, images)
-- `ChatInput`: Text input with image upload capability
-- Quick action buttons for common queries
-- Smooth scroll behavior and snap scrolling
-- Mobile-responsive design with slide-out menu
+#### Token Balance Component
+- Gradient background with blur effect
+- Animated token icon with radiating lines
+- Compact "+" button with hover animations
+- Expandable form for adding tokens
+- Real-time balance updates
 
-### 3. Betting System
+#### BetStats Component
+Modern stat cards with:
+- Total Bets (156): Purple gradient icon
+- Pending (23): Amber gradient with rotating line animation
+- Won (89): Green gradient with checkmark
+- Accuracy (92%): Blue gradient with graph icon
+- Rank (#7): Pink gradient with star icon
+- Each stat has hover animations and pulse effects
+
+### 2. Mobile Interface
+- Sticky header with centered BetChat logo
+- Slide-out menu with backdrop blur
+- Top-right logout button with red accent
+- Animated hamburger menu
+- Full-height layout optimization
+- Bottom-anchored chat input
+
+### 3. Chat Interface
+- Gradient message bubbles
+- Snap scrolling for smooth navigation
+- Quick action buttons with hover effects
+- Image upload capability
+- Smart message grouping
+
+### 4. Betting System
 Files involved:
 - `utils/betSubmission.js`: Bet submission logic
 - `models/Bet.js`: Bet data schema
@@ -36,7 +62,7 @@ Betting flow:
 6. Token balance updated
 7. Success confirmation displayed
 
-### 4. Authentication System
+### 5. Authentication System
 Files involved:
 - `utils/auth.js`: Authentication utilities
 - `components/auth/LoginForm.js`: Login interface
@@ -49,7 +75,7 @@ Auth flow:
 4. Token included in all API requests
 5. Logout clears token and resets state
 
-### 5. Stats and Reputation System
+### 6. Stats and Reputation System
 Files involved:
 - `components/wallet/BetStats.js`: Stats display component
 - `pages/api/bets/stats.js`: Stats calculation endpoint
@@ -200,4 +226,96 @@ Required variables:
 2. Action Failures:
    - Retry logic
    - Error messages
-   - State recovery 
+   - State recovery
+
+## Technical Implementation
+
+### 1. Styling System
+Using Tailwind CSS with custom utilities:
+```css
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 3s ease infinite;
+}
+```
+
+### 2. Component Structure
+Modular components with clear separation:
+- Layout components (ChatContainer, SideMenu)
+- Feature components (TokenBalance, BetStats)
+- UI components (buttons, cards, icons)
+
+### 3. State Management
+- React hooks for local state
+- Context for global state
+- Real-time updates via WebSocket
+
+### 4. Mobile Optimization
+- Responsive breakpoints
+- Touch-friendly interfaces
+- Performance optimization
+
+### 5. Animation System
+- CSS transitions
+- React state-based animations
+- Gradient animations
+- Hover effects
+
+## Development Guidelines
+
+### 1. Styling Conventions
+- Use Tailwind classes
+- Follow gradient pattern:
+  ```jsx
+  className="bg-gradient-to-br from-gray-900/95 to-gray-800/95"
+  ```
+- Maintain consistent spacing
+- Use relative units
+
+### 2. Component Organization
+- Keep components focused
+- Share common styles
+- Maintain consistent structure
+
+### 3. Mobile First
+- Design for mobile first
+- Add desktop enhancements
+- Test on multiple devices
+
+### 4. Performance
+- Optimize animations
+- Lazy load components
+- Minimize re-renders
+
+### 5. Accessibility
+- Semantic HTML
+- ARIA labels
+- Keyboard navigation
+- Color contrast
+
+## Error Handling
+1. User Feedback:
+   - Clear error messages
+   - Loading states
+   - Success confirmations
+
+2. Recovery:
+   - Retry mechanisms
+   - Fallback UI
+   - State restoration
+
+## Future Improvements
+1. Enhanced Animations:
+   - More fluid transitions
+   - Reduced motion options
+   - Performance optimization
+
+2. Better Mobile UX:
+   - Gesture controls
+   - Haptic feedback
+   - Native-like feel
+
+3. Accessibility:
+   - Screen reader support
+   - Keyboard shortcuts
+   - High contrast mode 
