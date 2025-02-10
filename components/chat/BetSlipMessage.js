@@ -21,21 +21,22 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
 
     try {
       const result = await submitBet(betSlip);
-      onSubmit({
-        role: 'assistant',
-        type: 'bet_success',
-        content: {
-          _id: result.bet._id,
-          type: result.bet.type,
-          sport: result.bet.sport,
-          team1: result.bet.team1,
-          team2: result.bet.team2,
-          line: result.bet.line,
-          odds: result.bet.odds,
-          stake: result.bet.stake,
-          payout: result.bet.payout
-        }
-      });
+      if (result.success) {
+        // Send the bet data directly instead of the success message
+        onSubmit({
+          name: 'place_bet',
+          type: betSlip.type,
+          sport: betSlip.sport,
+          team1: betSlip.team1,
+          team2: betSlip.team2,
+          line: betSlip.line,
+          odds: betSlip.odds,
+          stake: parseFloat(betSlip.stake),
+          payout: betSlip.payout
+        });
+      } else {
+        setError('Failed to place bet. Please try again.');
+      }
     } catch (err) {
       setError('Failed to place bet. Please try again.');
     } finally {

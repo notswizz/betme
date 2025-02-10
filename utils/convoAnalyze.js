@@ -91,17 +91,9 @@ export async function analyzeConversation(messages) {
 /**
  * Makes API call after action is confirmed
  */
-export async function handleAction(action, userId) {
+export async function handleAction(action, userId, token = null) {
   try {
-    // Check authentication first
-    if (!isAuthenticated()) {
-      return {
-        success: false,
-        message: 'Please login to perform this action',
-        error: 'NOT_AUTHENTICATED'
-      };
-    }
-
+    // We don't need to check isAuthenticated() here since the API route already verifies the token
     switch (action.name) {
       case 'add_tokens':
         return await addTokens(userId, action.amount);
@@ -111,15 +103,41 @@ export async function handleAction(action, userId) {
           tokenPrice: action.listingPrice
         });
       case 'place_bet':
-        // Validate required fields
-        if (!action.type || !action.sport || !action.stake) {
-          throw new Error('Missing required bet information');
+        // Log the incoming action data
+        console.log('Handling bet action:', action);
+        
+        // Parse numeric values
+        const stake = parseFloat(action.stake);
+        const odds = parseInt(action.odds);
+        
+        // Validate and format bet data
+        const betData = {
+          type: action.type,
+          sport: action.sport,
+          team1: action.team1,
+          team2: action.team2,
+          line: action.line,
+          odds: odds,
+          stake: stake,
+          payout: parseFloat(action.payout)
+        };
+
+        // Validate required fields with detailed error
+        const missingFields = [];
+        if (!betData.type) missingFields.push('type');
+        if (!betData.sport) missingFields.push('sport');
+        if (!betData.team1) missingFields.push('team1');
+        if (!betData.team2) missingFields.push('team2');
+        if (isNaN(betData.odds)) missingFields.push('odds');
+        if (isNaN(betData.stake) || betData.stake <= 0) missingFields.push('stake');
+
+        if (missingFields.length > 0) {
+          const error = `Missing required bet information: ${missingFields.join(', ')}`;
+          console.error(error, betData);
+          throw new Error(error);
         }
         
-        return await submitBet({
-          ...action,
-          userId
-        });
+        return await submitBet(betData, token);
       default:
         return {
           success: false,

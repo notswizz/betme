@@ -77,7 +77,8 @@ export default function ChatContainer() {
       setLoading(true);
 
       // Check authentication first
-      if (!isAuthenticated()) {
+      const token = localStorage.getItem('token');
+      if (!token) {
         setMessages(prev => [...prev, {
           role: 'assistant',
           content: 'Please login to perform this action.',
@@ -85,164 +86,62 @@ export default function ChatContainer() {
         }]);
         return;
       }
-      
-      // Handle bet placement
-      if (action.name === 'place_bet') {
-        // Add user confirmation message with more details
-        setMessages(prev => [...prev, {
-          role: 'user',
-          content: `Confirming bet:\n` +
-                  `Type: ${action.type}\n` +
-                  `Sport: ${action.sport}\n` +
-                  `${action.team1} vs ${action.team2}\n` +
-                  `Line: ${action.line}\n` +
-                  `Odds: ${action.odds}\n` +
-                  `Stake: $${action.stake}`,
-          type: 'text'
-        }]);
 
-        // Format bet data
-        const betData = {
-          type: action.type || 'Spread',
-          sport: action.sport || 'NBA',
+      // Log for debugging
+      console.log('Confirming action with token:', token);
+      console.log('Action data:', action);
+
+      // Format bet data if this is a bet action
+      let confirmAction = action;
+      if (action.name === 'place_bet') {
+        // Parse numeric values
+        const stake = parseFloat(action.stake);
+        const odds = parseInt(action.odds);
+        const payout = parseFloat(action.payout);
+
+        confirmAction = {
+          name: 'place_bet',
+          type: action.type,
+          sport: action.sport,
           team1: action.team1,
           team2: action.team2,
-          line: action.line?.toString() || '0',
-          odds: parseInt(action.odds?.toString() || '-110'),
-          stake: parseFloat(action.stake?.toString() || '0'),
+          line: action.line,
+          odds: odds,
+          stake: stake,
+          payout: payout
         };
-
-        // Calculate payout
-        const calculatePayout = (stake, odds) => {
-          let payout = stake;
-          if (odds > 0) {
-            payout += (stake * odds) / 100;
-          } else if (odds < 0) {
-            payout += (stake * 100) / Math.abs(odds);
-          }
-          return parseFloat(payout.toFixed(2));
-        };
-
-        // Add calculated payout
-        betData.payout = calculatePayout(betData.stake, betData.odds);
-
-        // Validate required fields
-        if (!betData.type || !betData.sport || !betData.team1 || !betData.team2 || 
-            isNaN(betData.odds) || isNaN(betData.stake) || betData.stake <= 0) {
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: 'Invalid bet data. Please make sure all fields are filled correctly.',
-            type: 'text'
-          }]);
-          return;
-        }
-
-        // Submit bet directly to bets API
-        const token = localStorage.getItem('token');
-        const betResponse = await fetch('/api/bets/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(betData)
-        });
-
-        const responseData = await betResponse.json();
-        
-        if (!betResponse.ok) {
-          if (betResponse.status === 401) {
-            localStorage.removeItem('token');
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: 'Your session has expired. Please login again.',
-              type: 'text'
-            }]);
-          } else {
-            setMessages(prev => [...prev, {
-              role: 'assistant',
-              content: `Error: ${responseData.message || 'Failed to place bet'}`,
-              type: 'text'
-            }]);
-          }
-          return;
-        }
-
-        // Add detailed success message
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: `✅ Bet placed successfully!\n\n` +
-                  `🎯 Bet Details:\n` +
-                  `ID: ${responseData.bet._id}\n` +
-                  `Type: ${betData.type}\n` +
-                  `Sport: ${betData.sport}\n` +
-                  `Matchup: ${betData.team1} vs ${betData.team2}\n` +
-                  `Line: ${betData.line}\n` +
-                  `Odds: ${betData.odds}\n` +
-                  `Stake: $${betData.stake}\n` +
-                  `Potential Payout: $${betData.payout}`,
-          type: 'text'
-        }]);
-
-        // Also update the conversation with the bet ID
-        if (conversationId) {
-          await fetch('/api/chat/process', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              message: `Bet ${responseData.bet._id} placed successfully`,
-              conversationId,
-            }),
-          });
-        }
-
-        return;
       }
 
-      // Handle other actions through chat process
-      const response = await fetch('/api/chat/process', {
+      // Send all actions through chat process
+      const response = await fetch(window.location.origin + '/api/chat/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          confirmAction: action,
+          confirmAction,
           conversationId: conversationId
         })
       });
       
       const data = await response.json();
-      if (response.ok) {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: data.message.content,
-          type: data.message.type || 'text'
-        }]);
-      } else {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: 'Your session has expired. Please login again.',
-            type: 'text'
-          }]);
-        } else {
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: `Error: ${data.error || 'Failed to process action'}`,
-            type: 'text'
-          }]);
-        }
+      console.log('Action response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to confirm action');
       }
+
+      // Update messages with response
+      if (data.message) {
+        setMessages(prev => [...prev, data.message]);
+      }
+
     } catch (error) {
       console.error('Error confirming action:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Sorry, there was an error processing your request.',
+        content: error.message || 'Failed to confirm action. Please try again.',
         type: 'text'
       }]);
     } finally {

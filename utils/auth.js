@@ -31,7 +31,25 @@ export function getAuthToken() {
 export function isAuthenticated() {
   try {
     const token = getAuthToken();
-    return typeof token === 'string' && token.length > 0;
+    if (!token) return false;
+
+    // For client-side validation, we'll do a basic JWT structure check
+    // We can't verify the signature on client-side as we don't have JWT_SECRET
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+
+    // Check if token is expired
+    try {
+      const payload = JSON.parse(atob(parts[1]));
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        localStorage.removeItem('token'); // Clear expired token
+        return false;
+      }
+    } catch (e) {
+      return false;
+    }
+
+    return true;
   } catch (error) {
     console.error('Error checking authentication:', error);
     return false;

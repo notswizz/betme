@@ -59,7 +59,8 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
 
   // Handle successful bet message
   if (message.role === 'assistant' && message.type === 'bet_success') {
-    const betData = message.content;
+    // Parse the content if it's a string
+    const betData = typeof message.content === 'string' ? JSON.parse(message.content) : message.content;
     return (
       <div className="mb-4 md:mb-6">
         <div className={`flex justify-start items-start space-x-3`}>

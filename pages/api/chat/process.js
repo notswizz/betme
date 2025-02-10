@@ -77,31 +77,43 @@ export default async function handler(req, res) {
 
     // Handle action confirmation
     if (confirmAction) {
-      const result = await handleAction(confirmAction, userId);
+      const result = await handleAction(confirmAction, userId, token);
       
       if (result.success) {
         let confirmationMessages;
         
         // Special handling for bet placement
         if (confirmAction.name === 'place_bet' && result.bet) {
+          const betSuccessData = {
+            _id: result.bet._id,
+            type: result.bet.type,
+            sport: result.bet.sport,
+            team1: result.bet.team1,
+            team2: result.bet.team2,
+            line: result.bet.line,
+            odds: result.bet.odds,
+            stake: result.bet.stake,
+            payout: result.bet.payout
+          };
+
           confirmationMessages = [
             { role: 'user', content: 'Confirmed' },
             { 
               role: 'assistant',
               type: 'bet_success',
-              content: {
-                _id: result.bet._id,
-                type: result.bet.type,
-                sport: result.bet.sport,
-                team1: result.bet.team1,
-                team2: result.bet.team2,
-                line: result.bet.line,
-                odds: result.bet.odds,
-                stake: result.bet.stake,
-                payout: result.bet.payout
-              }
+              content: JSON.stringify(betSuccessData)
             }
           ];
+
+          // Return the object format for the UI
+          return res.status(200).json({
+            message: { 
+              role: 'assistant',
+              type: 'bet_success',
+              content: betSuccessData
+            },
+            conversationId: conversation._id.toString()
+          });
         } else {
           confirmationMessages = [
             { role: 'user', content: 'Confirmed' },
