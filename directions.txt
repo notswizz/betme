@@ -162,7 +162,7 @@ Game Data Format:
 
 3. Date Management:
    - Timezone handling (America/New_York)
-   - Date normalization to noon
+   - Date normalization to midnight
    - Consistent UTC conversion
    - Date range selection (±7 days)
 
@@ -172,40 +172,135 @@ Game Data Format:
    - Automatic retry with exponential backoff
    - Cache fallback on 429 errors
 
-5. Game Status Mapping:
+### 12. Scoreboard Component
+
+#### Overview
+The Scoreboard component provides a real-time display of NBA games with live updates and interactive features.
+
+#### Key Components
+
+1. Main Scoreboard (`Scoreboard.js`):
+   - Real-time game updates (30-second refresh)
+   - Horizontal scrolling game cards
+   - Loading states with skeleton UI
+   - Error handling and fallbacks
+   - Automatic date handling for current day's games
+
+2. Game Cards:
+   - Team information (names, logos)
+   - Live scores and quarter breakdowns
+   - Game status indicators
+   - Venue information
+   - Interactive betting and analysis buttons
+   - Hover effects and animations
+
+#### Data Flow
+
+1. Initial Load:
    ```javascript
-   const statusDisplay = {
-     'NS': 'Not Started',
-     'FT': 'Final',
-     'HT': 'Halftime',
-     'Q1': '1st Quarter',
-     'Q2': '2nd Quarter',
-     'Q3': '3rd Quarter',
-     'Q4': '4th Quarter',
-     'AOT': 'After OT',
-     'POST': 'Postponed'
-   }
+   // Fetch games for current date
+   const fetchGames = async () => {
+     const games = await fetchBasketballGames();
+     const todaysGames = filterGamesForToday(games);
+     setGames(todaysGames);
+   };
    ```
 
-6. Auto-Refresh Logic:
-   - 30-second intervals for live games
-   - Only active for current day's games
-   - Automatic cleanup on component unmount
-   - Conditional refresh based on game status
+2. Auto-Refresh:
+   - 30-second intervals
+   - Maintains game state
+   - Updates scores and status
+   - Cleans up on unmount
 
-7. Error Handling:
-   - API error classification
-   - Rate limit detection
-   - Network error recovery
-   - Invalid data handling
-   - Retry mechanism with backoff
+3. Game Filtering:
+   - Shows only current day's games
+   - Sorts by game time
+   - Filters out finished games
+   - Handles timezone differences
 
-8. Performance Optimization:
-   - Memoized data formatting
-   - Efficient date comparisons
-   - Minimal re-renders
+#### Visual Features
+
+1. Game Card Design:
+   - Gradient backgrounds
+   - Team-based layouts
+   - Score highlighting
+   - Quarter-by-quarter breakdown
+   - Status indicators
+   - Interactive elements
+
+2. Loading States:
+   - Skeleton loading UI
+   - Smooth transitions
+   - Placeholder content
+   - Error state handling
+
+3. Responsive Layout:
+   - Horizontal scrolling
+   - Mobile-friendly design
+   - Flexible card sizing
+   - Touch-friendly interactions
+
+#### Performance Optimizations
+
+1. Data Management:
+   - Memoized callbacks
+   - Efficient re-renders
+   - Controlled updates
+   - Smart caching
+
+2. UI Performance:
+   - CSS transitions
+   - Hardware acceleration
+   - Lazy loading
+   - Optimized animations
+
+3. Network Efficiency:
    - Cached API responses
-   - Optimized data structures
+   - Batched updates
+   - Rate limit handling
+   - Error recovery
+
+#### User Interaction
+
+1. Game Cards:
+   - Hover effects
+   - Click actions
+   - Betting integration
+   - Analysis features
+
+2. Navigation:
+   - Smooth scrolling
+   - Touch gestures
+   - Keyboard accessibility
+   - Focus management
+
+#### Error Handling
+
+1. API Failures:
+   - Fallback content
+   - Retry mechanism
+   - User feedback
+   - Cache utilization
+
+2. Data Issues:
+   - Null checks
+   - Default values
+   - Fallback images
+   - Status messages
+
+#### Future Enhancements
+
+1. Planned Features:
+   - Date selection
+   - Team filtering
+   - Advanced statistics
+   - Betting odds integration
+
+2. Improvements:
+   - Performance monitoring
+   - Analytics integration
+   - A/B testing
+   - User preferences
 
 ### 7. UI Components
 1. Side Menu:
