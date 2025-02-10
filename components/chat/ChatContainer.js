@@ -4,6 +4,7 @@ import MobileMenuButton from '../container/MobileMenuButton';
 import Header from '../container/Header';
 import SideMenu from '../container/SideMenu';
 import ChatArea from '../container/ChatArea';
+import PlayerStatsCard from '../messages/PlayerStatsCard';
 
 export default function ChatContainer() {
   const [messages, setMessages] = useState([]);
@@ -13,6 +14,7 @@ export default function ChatContainer() {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const router = useRouter();
+  const [loadingStats, setLoadingStats] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -131,6 +133,7 @@ export default function ChatContainer() {
         }
         // For basketball stats queries
         else if (data.message.type === 'player_stats') {
+          setLoadingStats(true);
           setMessages(prev => {
             const filteredPrev = prev.filter(msg => 
               msg.type !== 'player_stats' &&
@@ -172,6 +175,7 @@ export default function ChatContainer() {
       }
     } finally {
       setIsLoading(false);
+      setLoadingStats(false);
     }
   };
 

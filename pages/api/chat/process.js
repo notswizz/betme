@@ -62,20 +62,34 @@ function handleVeniceResponse(response) {
 
     // Handle basketball queries with improved structure
     if (jsonData.intent === 'basketball_query') {
+      // Only process as player stats if we have a specific player and stat type
+      if (jsonData.player && jsonData.type !== 'general') {
+        return {
+          message: {
+            role: 'assistant',
+            type: 'player_stats',
+            content: {
+              query: {
+                type: jsonData.type,
+                player: jsonData.player,
+                stat: jsonData.stat
+              },
+              response: textContent,
+              stats: null
+            }
+          },
+          intent: jsonData
+        };
+      }
+      
+      // Otherwise treat it as a normal chat message
       return {
         message: {
           role: 'assistant',
-          type: 'player_stats',
-          content: {
-            query: {
-              type: jsonData.type,
-              player: jsonData.player,
-              stat: jsonData.stat
-            },
-            response: textContent
-          }
+          type: 'text',
+          content: textContent.trim()
         },
-        intent: jsonData
+        intent: { intent: 'chat', confidence: 1.0 }
       };
     }
     
@@ -363,31 +377,35 @@ export default async function handler(req, res) {
       if (intent.intent === 'basketball_query') {
         console.log('Processing basketball query...', intent);
         try {
-          const basketballResponse = await handleBasketballQuery({
+          const stats = await handleBasketballQuery({
             type: intent.type,
             player: intent.player,
             stat: intent.stat
           });
-          console.log('Basketball API response:', basketballResponse);
+          console.log('Basketball API response:', stats);
 
-          if (!basketballResponse || basketballResponse.error) {
-            console.error('Basketball query error:', basketballResponse?.error || 'No response');
+          if (stats.type === 'text') {
+            // If we got an error message
             return res.status(200).json({
               message: {
                 role: 'assistant',
                 type: 'text',
-                content: basketballResponse?.error || 'Sorry, I had trouble getting those stats. Please try again.'
+                content: stats.content
               },
               conversationId: conversation._id.toString()
             });
           }
 
-          // Add the response to conversation and return
-          conversation.messages.push(basketballResponse);
-          await conversation.save();
-
+          // If we got stats, format them for display
           return res.status(200).json({
-            message: basketballResponse,
+            message: {
+              role: 'assistant',
+              type: 'player_stats',
+              content: {
+                ...stats.content,
+                team: stats.content.team // Explicitly ensure team is included
+              }
+            },
             conversationId: conversation._id.toString()
           });
         } catch (error) {
