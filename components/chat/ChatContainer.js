@@ -79,24 +79,7 @@ export default function ChatContainer() {
       if (!response.ok) {
         const errorMessage = data.message || data.error || 'Failed to process message';
         console.error('Chat error:', errorMessage);
-        
-        // Log additional error details if available
-        if (data.details) {
-          console.error('Error details:', data.details);
-        }
-        
         setError(errorMessage);
-        
-        // Don't add error to messages if it's a basketball query that failed
-        if (!userMessage.content.toLowerCase().includes('points') && 
-            !userMessage.content.toLowerCase().includes('stats') && 
-            !userMessage.content.toLowerCase().includes('averaging')) {
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            type: 'text',
-            content: errorMessage
-          }]);
-        }
         return;
       }
 
@@ -105,74 +88,39 @@ export default function ChatContainer() {
         setConversationId(data.conversationId);
       }
 
-      // Handle multiple messages in response
-      if (Array.isArray(data.messages)) {
-        setMessages(prev => {
-          // Filter out any "Analyzing bet slip..." messages and empty messages
-          const filteredPrev = prev.filter(msg => 
-            !(msg.type === 'image' && msg.content === 'Analyzing bet slip...') &&
-            msg.content?.trim()
-          );
-          return [...filteredPrev, ...data.messages];
-        });
-      } 
-      // Handle single message response
-      else if (data.message) {
-        // If this is a bet slip, just add the bet slip (no confirmation needed yet)
-        if (data.message.type === 'betslip') {
-          setMessages(prev => {
-            // Remove any previous bet slips and empty messages
-            const filteredPrev = prev.filter(msg => 
-              msg.type !== 'betslip' && 
-              ((typeof msg.content === 'string' && msg.content.trim()) || 
-               typeof msg.content === 'object') &&
-              !(msg.type === 'text' && typeof msg.content === 'string' && !msg.content.trim())
-            );
-            return [...filteredPrev, data.message];
-          });
-        }
-        // For basketball stats queries
-        else if (data.message.type === 'player_stats') {
+      // Handle the response message
+      if (data.message) {
+        const newMessage = data.message;
+        
+        // For player stats, show loading state while stats are being processed
+        if (newMessage.type === 'player_stats') {
           setLoadingStats(true);
           setMessages(prev => {
-            const filteredPrev = prev.filter(msg => 
-              msg.type !== 'player_stats' &&
-              ((typeof msg.content === 'string' && msg.content.trim()) || 
-               typeof msg.content === 'object')
+            // Remove any previous stats cards and loading messages
+            const filteredMessages = prev.filter(msg => 
+              msg.type !== 'player_stats' && 
+              !(msg.type === 'text' && msg.content === 'Loading stats...')
             );
-            return [...filteredPrev, data.message];
+            return [...filteredMessages, newMessage];
+          });
+          setLoadingStats(false);
+        }
+        // For bet slips, replace any existing bet slips
+        else if (newMessage.type === 'betslip') {
+          setMessages(prev => {
+            const filteredMessages = prev.filter(msg => msg.type !== 'betslip');
+            return [...filteredMessages, newMessage];
           });
         }
-        // For all other messages, add them if they're not empty and not just whitespace
-        else if ((typeof data.message.content === 'string' && data.message.content.trim()) || 
-                 typeof data.message.content === 'object') {
-          setMessages(prev => {
-            // Filter out any "Analyzing bet slip..." messages, empty messages, and plain text messages without content
-            const filteredPrev = prev.filter(msg => 
-              !(msg.type === 'image' && msg.content === 'Analyzing bet slip...') &&
-              ((typeof msg.content === 'string' && msg.content.trim()) || 
-               typeof msg.content === 'object') &&
-              !(msg.type === 'text' && typeof msg.content === 'string' && !msg.content.trim())
-            );
-            return [...filteredPrev, data.message];
-          });
+        // For all other messages, add if they have content
+        else if (newMessage.content?.trim()) {
+          setMessages(prev => [...prev, newMessage]);
         }
       }
 
     } catch (error) {
       console.error('Chat error:', error);
-      setError(error.message);
-      
-      // Don't add error to messages if it's a basketball query that failed
-      if (!message.content.toLowerCase().includes('points') && 
-          !message.content.toLowerCase().includes('stats') && 
-          !message.content.toLowerCase().includes('averaging')) {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          type: 'text',
-          content: 'Sorry, there was an error processing your message. Please try again.'
-        }]);
-      }
+      setError(error.message || 'An error occurred while processing your message');
     } finally {
       setIsLoading(false);
       setLoadingStats(false);

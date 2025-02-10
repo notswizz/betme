@@ -50,19 +50,23 @@ async function handleBasketballIntent(aiResponse) {
 
     // Extract the actual query data from the intent
     const queryData = {
-      type: aiResponse.type,
+      type: aiResponse.intent,
       player: aiResponse.player,
       stat: aiResponse.stat,
-      team: aiResponse.team
+      team: aiResponse.team,
+      season: aiResponse.season || new Date().getFullYear().toString()
     };
 
     console.log('Extracted query data:', queryData);
 
     // Handle basic player stats query
-    if (queryData.type === 'player_stats') {
+    if (queryData.type === 'player_stats' || aiResponse.intent === 'player_stats') {
       console.log('Processing player stats query for:', queryData.player);
-      const playerStats = await getPlayerStats({
-        player: queryData.player
+      const playerStats = await handleBasketballQuery({
+        type: 'player_stats',
+        player: queryData.player,
+        stat: queryData.stat,
+        season: queryData.season
       });
       
       if (!playerStats) {
@@ -72,26 +76,7 @@ async function handleBasketballIntent(aiResponse) {
         };
       }
 
-      // If a specific stat was requested
-      if (queryData.stat && queryData.stat !== 'all') {
-        const statValue = playerStats.averages[queryData.stat];
-        if (statValue === undefined) {
-          return {
-            type: 'error',
-            message: `Couldn't find ${queryData.stat} stats for ${queryData.player}`
-          };
-        }
-        return {
-          type: 'text',
-          content: `${playerStats.player.firstName} ${playerStats.player.lastName} is averaging ${statValue} ${queryData.stat} per game this season.`
-        };
-      }
-
-      // Return full stats
-      return {
-        type: 'text',
-        content: `${playerStats.player.firstName} ${playerStats.player.lastName} is averaging ${playerStats.averages.points} points, ${playerStats.averages.rebounds} rebounds, and ${playerStats.averages.assists} assists in ${playerStats.averages.minutes} minutes per game this season.`
-      };
+      return playerStats;
     }
 
     // Handle other query types
@@ -320,6 +305,10 @@ export async function handleAction(action, userId, token = null) {
           const error = `Missing required bet information: ${missingFields.join(', ')}`;
           console.error(error, betData);
           throw new Error(error);
+        }
+        
+        if (!betData || !betData.type || !betData.stake || !betData.odds) {
+          throw new Error('Invalid bet data');
         }
         
         return await submitBet(betData, token);

@@ -10,7 +10,8 @@ import { getListings } from '@/pages/api/actions/listing';
 import User from '@/models/User';
 import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
-import { handleBasketballQuery } from '@/utils/nbaApi';
+import { getPlayerStats, getTeamNextGame, handleBasketballQuery, fetchPlayerStatistics } from '@/utils/nbaApi';
+import { findPlayerByName } from '@/services/playerService';
 
 // Helper function to handle Venice API responses
 function handleVeniceResponse(response) {
@@ -61,35 +62,22 @@ function handleVeniceResponse(response) {
     }
 
     // Handle basketball queries with improved structure
-    if (jsonData.intent === 'basketball_query') {
-      // Only process as player stats if we have a specific player and stat type
-      if (jsonData.player && jsonData.type !== 'general') {
-        return {
-          message: {
-            role: 'assistant',
-            type: 'player_stats',
-            content: {
-              query: {
-                type: jsonData.type,
-                player: jsonData.player,
-                stat: jsonData.stat
-              },
-              response: textContent,
-              stats: null
-            }
-          },
-          intent: jsonData
-        };
-      }
-      
-      // Otherwise treat it as a normal chat message
+    if (jsonData.intent === 'player_stats') {
+      console.log('Processing player stats query:', jsonData);
       return {
         message: {
           role: 'assistant',
-          type: 'text',
-          content: textContent.trim()
+          type: 'player_stats',
+          content: {
+            query: {
+              player: jsonData.player,
+              stat: jsonData.stat,
+              season: jsonData.season
+            },
+            response: textContent
+          }
         },
-        intent: { intent: 'chat', confidence: 1.0 }
+        intent: jsonData
       };
     }
     
@@ -277,6 +265,21 @@ async function getUserBets(userId) {
   }
 }
 
+// More natural formatting
+const formatStatValue = (stat, value) => {
+  switch(stat.toLowerCase()) {
+    case 'points': return `${value} PPG`;
+    case 'assists': return `${value} APG`;
+    case 'rebounds': return `${value} RPG`;
+    case 'steals': return `${value} SPG`;
+    case 'blocks': return `${value} BPG`;
+    case 'fgp': return `${value} FG%`;
+    case 'tpp': return `${value} 3P%`;
+    case 'ftp': return `${value} FT%`;
+    default: return value;
+  }
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -373,43 +376,41 @@ export default async function handler(req, res) {
       const { message: responseMessage, intent } = handleVeniceResponse(aiResponse);
       console.log('Processed response:', { message: responseMessage, intent });
 
-      // If this is a basketball query
-      if (intent.intent === 'basketball_query') {
-        console.log('Processing basketball query...', intent);
+      // Consolidate player stats handling
+      if (intent.intent === 'player_stats' || intent.intent === 'basketball_query') {
+        console.log('=== DEBUG: Processing Player Stats Query ===');
+        console.log('Intent:', intent);
         try {
-          const stats = await handleBasketballQuery({
-            type: intent.type,
+          const result = await handleBasketballQuery({
+            type: 'player_stats',
             player: intent.player,
-            stat: intent.stat
+            stat: intent.stat,
+            season: intent.season
           });
-          console.log('Basketball API response:', stats);
+          console.log('Basketball query result:', result);
 
-          if (stats.type === 'text') {
-            // If we got an error message
+          if (result.type === 'text') {
             return res.status(200).json({
               message: {
                 role: 'assistant',
                 type: 'text',
-                content: stats.content
+                content: result.content
               },
               conversationId: conversation._id.toString()
             });
           }
 
-          // If we got stats, format them for display
+          // Return properly formatted stats for PlayerStatsCard
           return res.status(200).json({
             message: {
               role: 'assistant',
               type: 'player_stats',
-              content: {
-                ...stats.content,
-                team: stats.content.team // Explicitly ensure team is included
-              }
+              content: result.content
             },
             conversationId: conversation._id.toString()
           });
         } catch (error) {
-          console.error('Basketball query error:', error);
+          console.error('Error processing basketball query:', error);
           return res.status(200).json({
             message: {
               role: 'assistant',
@@ -419,6 +420,29 @@ export default async function handler(req, res) {
             conversationId: conversation._id.toString()
           });
         }
+      } else if (intent.intent === 'team_next_game') {
+        // Handle team next game intent
+        const nextGame = await getTeamNextGame(intent.team);
+
+        if (nextGame.error) {
+          return res.status(200).json({
+            message: {
+              role: 'assistant',
+              type: 'text',
+              content: nextGame.errorMessage
+            },
+            conversationId: conversation._id.toString()
+          });
+        }
+
+        return res.status(200).json({
+          message: {
+            role: 'assistant',
+            type: 'team_next_game',
+            content: nextGame.data
+          },
+          conversationId: conversation._id.toString()
+        });
       }
 
       // For other messages, save and return

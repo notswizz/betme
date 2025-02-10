@@ -27,56 +27,9 @@ const StatBoxSkeleton = () => (
   </div>
 );
 
-const PlayerStatsCard = ({ stats, isLoading }) => {
-  if (isLoading) {
-    return (
-      <div className="w-full max-w-md mx-auto">
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-xl border border-white/10">
-          {/* Loading Header */}
-          <div className="relative p-3">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-16 -mt-16" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl -ml-16 -mb-16" />
-            
-            <div className="relative flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gray-700 animate-pulse"></div>
-              <div className="flex-1">
-                <div className="h-6 w-48 bg-gray-700 rounded animate-pulse mb-2"></div>
-                <div className="h-4 w-32 bg-gray-700 rounded animate-pulse"></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Loading Stats Grid */}
-          <div className="grid grid-cols-3 gap-2 px-3 py-2">
-            <StatBoxSkeleton />
-            <StatBoxSkeleton />
-            <StatBoxSkeleton />
-          </div>
-
-          {/* Loading Details */}
-          <div className="px-3 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              {[1, 2].map(section => (
-                <div key={section}>
-                  <div className="h-3 w-20 bg-gray-700 rounded animate-pulse mb-2"></div>
-                  {[1, 2, 3, 4].map(item => (
-                    <div key={item} className="flex justify-between items-center py-1.5 border-b border-gray-700/50">
-                      <div className="h-3 w-16 bg-gray-700 rounded animate-pulse"></div>
-                      <div className="h-3 w-8 bg-gray-700 rounded animate-pulse"></div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Loading Footer */}
-          <div className="px-3 py-2 bg-gray-900/50">
-            <div className="h-3 w-32 bg-gray-700 rounded animate-pulse mx-auto"></div>
-          </div>
-        </div>
-      </div>
-    );
+const PlayerStatsCard = ({ stats }) => {
+  if (!stats) {
+    return <div>Loading...</div>;
   }
 
   const {
@@ -85,18 +38,19 @@ const PlayerStatsCard = ({ stats, isLoading }) => {
     team,
     season,
     gamesPlayed,
-    points,
-    rebounds,
-    assists,
-    minutes,
-    fgp,
-    tpp,
-    ftp,
-    steals,
-    blocks,
-    turnovers,
-    fouls,
-    note
+    stats: {
+      points,
+      assists,
+      rebounds,
+      steals,
+      blocks,
+      turnovers,
+      fouls,
+      minutes,
+      fgp,
+      tpp,
+      ftp,
+    }
   } = stats;
 
   return (
@@ -125,20 +79,12 @@ const PlayerStatsCard = ({ stats, isLoading }) => {
               </h2>
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-gray-400">
-                  {team?.city} {team?.nickname}
+                  {team?.name}
                 </span>
                 <span className="text-gray-600">•</span>
                 <span className="text-gray-400">
-                  {season}-{parseInt(season) + 1}
+                  {season}
                 </span>
-                {note && (
-                  <>
-                    <span className="text-gray-600">•</span>
-                    <span className="text-yellow-400">
-                      {note}
-                    </span>
-                  </>
-                )}
               </div>
             </div>
           </div>
@@ -158,7 +104,7 @@ const PlayerStatsCard = ({ stats, isLoading }) => {
               <h3 className="text-[10px] font-medium uppercase tracking-wider text-gray-400 mb-1">
                 Efficiency
               </h3>
-              <StatRow icon="⏱️" label="Min" value={`${minutes}`} />
+              <StatRow icon="⏱️" label="Min" value={minutes} />
               <StatRow icon="🎯" label="FG%" value={`${fgp}%`} />
               <StatRow icon="🏹" label="3P%" value={`${tpp}%`} />
               <StatRow icon="🎪" label="FT%" value={`${ftp}%`} />
