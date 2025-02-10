@@ -11,6 +11,172 @@ import User from '@/models/User';
 import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 
+// Helper function to handle Venice API responses
+function handleVeniceResponse(response) {
+  // Debug logging
+  console.log('Handling Venice response:', JSON.stringify(response, null, 2));
+
+  let content;
+  let intent = { intent: 'chat', confidence: 1.0 };
+  
+  // Handle both direct response format and choices format
+  if (response.content) {
+    content = response.content;
+  } else if (response?.choices?.[0]?.message?.content) {
+    content = response.choices[0].message.content;
+  } else {
+    throw new Error('Invalid response format from Venice API');
+  }
+
+  // Try to separate message and JSON
+  const parts = content.split(/(\{.*\})$/s);
+  
+  // If we have a JSON part, try to parse it
+  if (parts[1]) {
+    try {
+      const jsonData = JSON.parse(parts[1]);
+      
+      // Check if this is a betting intent
+      if (jsonData.type && jsonData.sport) {
+        // This is a bet slip, format it appropriately
+        return {
+          message: {
+            role: 'assistant',
+            type: 'betslip',
+            content: JSON.stringify({
+              type: jsonData.type,
+              sport: jsonData.sport,
+              team1: jsonData.team1 || '',
+              team2: jsonData.team2 || '',
+              line: jsonData.line || '',
+              odds: jsonData.odds || '-110',
+              pick: jsonData.pick || '',
+              stake: jsonData.stake || '10',
+              payout: calculatePayout(parseFloat(jsonData.stake || 10), parseInt(jsonData.odds || -110)).toFixed(2)
+            })
+          },
+          intent: { intent: 'place_bet', confidence: jsonData.confidence || 0.9 }
+        };
+      }
+      
+      // Handle view_bets and other direct intents
+      if (jsonData.intent) {
+        intent = {
+          intent: jsonData.intent,
+          confidence: jsonData.confidence || 0.9
+        };
+        
+        // For view intents, set the type to direct and include the action
+        if (jsonData.intent === 'view_bets' || jsonData.intent === 'view_open_bets') {
+          return {
+            message: {
+              role: 'assistant',
+              type: 'text',
+              content: parts[0].trim()
+            },
+            intent: {
+              type: 'direct',
+              action: jsonData.intent,
+              confidence: jsonData.confidence || 0.9
+            }
+          };
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing JSON from Venice response:', e);
+    }
+  }
+
+  return {
+    message: {
+      role: 'assistant',
+      type: 'text',
+      content: parts[0].trim()
+    },
+    intent
+  };
+}
+
+// Helper function to calculate payout
+function calculatePayout(stake, odds) {
+  const numOdds = parseInt(odds);
+  if (numOdds > 0) {
+    return stake + (stake * numOdds) / 100;
+  } else if (numOdds < 0) {
+    return stake + (stake * 100) / Math.abs(numOdds);
+  }
+  return stake;
+}
+
+// Function to get open bets
+async function getOpenBets(userId) {
+  try {
+    const openBets = await Bet.find({
+      userId: { $ne: userId },
+      status: 'pending'
+    })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .lean();
+
+    const formattedBets = openBets.map(bet => ({
+      ...bet,
+      formattedTime: new Date(bet.createdAt).toLocaleString(),
+      payout: bet.payout || calculatePayout(bet.stake, bet.odds).toFixed(2),
+      line: bet.line || '-'
+    }));
+
+    return {
+      success: true,
+      message: {
+        role: 'assistant',
+        type: 'open_bets',
+        content: JSON.stringify(formattedBets)
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching open bets:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch open bets'
+    };
+  }
+}
+
+// Function to get user bets
+async function getUserBets(userId) {
+  try {
+    const userBets = await Bet.find({
+      userId: userId
+    })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+
+    const formattedBets = userBets.map(bet => ({
+      ...bet,
+      formattedTime: new Date(bet.createdAt).toLocaleString(),
+      payout: bet.payout || calculatePayout(bet.stake, bet.odds).toFixed(2),
+      line: bet.line || '-'
+    }));
+
+    return {
+      success: true,
+      message: {
+        role: 'assistant',
+        type: 'open_bets',
+        content: JSON.stringify(formattedBets)
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching user bets:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch your bets'
+    };
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -74,6 +240,9 @@ export default async function handler(req, res) {
 
     // Handle action confirmation
     if (confirmAction) {
+      // Debug logging
+      console.log('Processing action confirmation:', JSON.stringify(confirmAction, null, 2));
+
       // Get or create conversation first
       let conversation = conversationId 
         ? await Conversation.findById(conversationId)
@@ -82,13 +251,24 @@ export default async function handler(req, res) {
             userId: userId
           });
 
-      const result = await handleAction(confirmAction, userId, token);
+      // Extract the actual action from the confirmation message
+      const action = confirmAction.action || confirmAction;
+      
+      // Validate action format
+      if (!action || !action.name) {
+        return res.status(400).json({ 
+          error: 'Invalid action format',
+          message: 'The action format is invalid. Please try again.'
+        });
+      }
+
+      const result = await handleAction(action, userId, token);
       
       if (result.success) {
         let confirmationMessages;
         
         // Special handling for bet placement
-        if (confirmAction.name === 'place_bet' && result.bet) {
+        if (action.name === 'place_bet' && result.bet) {
           const betSuccessData = {
             _id: result.bet._id,
             type: result.bet.type,
@@ -105,8 +285,11 @@ export default async function handler(req, res) {
             { role: 'user', content: 'Confirmed' },
             { 
               role: 'assistant',
-              type: 'bet_success',
-              content: JSON.stringify(betSuccessData)
+              type: 'text',
+              content: JSON.stringify({
+                type: 'bet_success',
+                data: betSuccessData
+              })
             }
           ];
 
@@ -140,8 +323,8 @@ export default async function handler(req, res) {
         }
       } else {
         return res.status(400).json({ 
-          error: result.error,
-          message: result.message 
+          error: result.error || 'Failed to process action',
+          message: result.message || 'There was an error processing your request. Please try again.'
         });
       }
     }
@@ -223,288 +406,116 @@ export default async function handler(req, res) {
     // For regular messages, continue with normal flow
     conversation.messages.push(userMessage);
 
-    // Analyze conversation intent
-    const analysis = await analyzeConversation([...conversation.messages]);
-    console.log('Conversation analysis:', analysis); // Add debug logging
+    // Get AI response
+    const aiResponse = await generateAIResponse([...conversation.messages]);
+    console.log('AI Response:', JSON.stringify(aiResponse, null, 2));
 
-    // Handle direct responses
-    if (analysis.type === 'direct') {
-      let result;
-      
-      switch (analysis.action) {
-        case 'view_open_bets':
-          result = await getOpenBets(userId);
-          break;
-        case 'view_bets':
-          result = await getUserBets(userId);
-          break;
-        case 'balance_check':
-          result = {
-            success: true,
-            message: {
-              role: 'assistant',
-              type: 'text',
-              content: `Your current balance is ${user.tokenBalance} tokens.`
-            }
-          };
-          break;
-        default:
-          result = {
-            success: false,
-            error: 'Unknown direct action'
-          };
-      }
-
-      if (!result.success) {
-        return res.status(500).json({ error: result.error });
-      }
-
-      // Ensure message content is stringified before saving
-      const messageToSave = {
-        ...result.message,
-        content: typeof result.message.content === 'object' ? 
-          JSON.stringify(result.message.content) : 
-          result.message.content
-      };
-
-      conversation.messages.push(messageToSave);
-      await conversation.save();
-
-      return res.status(200).json({
-        message: result.message,
-        conversationId: conversation._id.toString()
-      });
-    }
-
-    // Get AI response for non-direct actions
-    const aiResponse = await generateAIResponse([
-      ...conversation.messages
-    ]);
-
-    // Extract JSON from response if it exists
-    let jsonResponse = null;
-    let conversationalResponse = '';
-    
+    // Handle the Venice response
     try {
-      const content = aiResponse.content;
-      // Find JSON object in the response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          jsonResponse = JSON.parse(jsonMatch[0]);
-          // Get the conversational part (everything before the JSON)
-          conversationalResponse = content.substring(0, jsonMatch.index).trim();
-        } catch (e) {
-          console.error('Error parsing JSON from AI response:', e);
-          // Continue with just the conversational response
-          conversationalResponse = content;
-        }
-      } else {
-        conversationalResponse = content;
-      }
-    } catch (error) {
-      console.error('Error processing AI response:', error);
-      conversationalResponse = aiResponse.content || "I'm not sure how to help with that. Would you like to place a bet, view open bets, or check your balance?";
-    }
-
-    // First check for betting intent in the JSON response
-    if (jsonResponse && jsonResponse.type && jsonResponse.sport) {
-      const betSlipContent = {
-        type: jsonResponse.type,
-        sport: jsonResponse.sport,
-        team1: jsonResponse.team1 || '',
-        team2: jsonResponse.team2 || '',
-        line: jsonResponse.line || '',
-        odds: jsonResponse.odds || '-110',
-        stake: jsonResponse.stake || '10',
-        pick: jsonResponse.pick || '',
-        payout: calculatePayout(parseFloat(jsonResponse.stake) || 10, jsonResponse.odds || '-110').toFixed(2)
-      };
-
-      // Add conversational response
-      if (conversationalResponse) {
-        conversation.messages.push({
-          role: 'assistant',
-          type: 'text',
-          content: conversationalResponse
+      const { message, intent } = handleVeniceResponse(aiResponse);
+      
+      // If this is a betting intent that returned a bet slip
+      if (message.type === 'betslip') {
+        conversation.messages.push(message);
+        await conversation.save();
+        
+        return res.status(200).json({
+          message: {
+            ...message,
+            content: JSON.parse(message.content) // Send as object for UI
+          },
+          conversationId: conversation._id.toString()
         });
       }
 
-      // Add bet slip - ensure content is stringified
-      const betSlipMessage = {
-        role: 'assistant',
-        type: 'betslip',
-        content: JSON.stringify(betSlipContent)
-      };
-      
-      conversation.messages.push(betSlipMessage);
-      await conversation.save();
+      // For other intents, continue with normal flow
+      const analysis = { type: intent.intent || 'chat' };
 
-      return res.status(200).json({
-        messages: [
-          ...(conversationalResponse ? [{
-            role: 'assistant',
-            type: 'text',
-            content: conversationalResponse
-          }] : []),
-          {
-            ...betSlipMessage,
-            content: betSlipContent // Send as object for UI
-          }
-        ],
-        conversationId: conversation._id.toString()
-      });
-    }
-    
-    // Then check for viewing intents
-    if (jsonResponse && jsonResponse.intent) {
-      let result;
-      
-      switch (jsonResponse.intent) {
-        case 'view_open_bets':
-          result = await getOpenBets(userId);
-          break;
-        case 'view_bets':
-          result = await getUserBets(userId);
-          break;
-        case 'check_balance':
-          result = {
-            success: true,
-            message: {
-              role: 'assistant',
-              type: 'text',
-              content: `Your current balance is ${user.tokenBalance} tokens.`
-            }
-          };
-          break;
-      }
-
-      if (result && result.success) {
-        // Add conversational response first
-        if (conversationalResponse) {
-          conversation.messages.push({
-            role: 'assistant',
-            type: 'text',
-            content: conversationalResponse
-          });
-        }
+      // Handle direct responses
+      if (analysis.type === 'direct' || intent.type === 'direct') {
+        let result;
+        const action = intent.action || analysis.action;
         
-        // Then add the actual data response - ensure content is stringified
+        switch (action) {
+          case 'view_open_bets':
+            result = await getOpenBets(userId);
+            break;
+          case 'view_bets':
+            result = await getUserBets(userId);
+            break;
+          case 'balance_check':
+            result = {
+              success: true,
+              message: {
+                role: 'assistant',
+                type: 'text',
+                content: `Your current balance is ${user.tokenBalance} tokens.`
+              }
+            };
+            break;
+          default:
+            result = {
+              success: false,
+              error: 'Unknown direct action'
+            };
+        }
+
+        if (!result.success) {
+          return res.status(500).json({ error: result.error });
+        }
+
+        // Ensure message content is stringified before saving
         const messageToSave = {
           ...result.message,
           content: typeof result.message.content === 'object' ? 
             JSON.stringify(result.message.content) : 
             result.message.content
         };
-        
+
         conversation.messages.push(messageToSave);
         await conversation.save();
 
+        // For bet views, parse the content back to an object for the UI
+        if (result.message.type === 'open_bets') {
+          return res.status(200).json({
+            message: {
+              ...result.message,
+              content: typeof result.message.content === 'string' ? 
+                JSON.parse(result.message.content) : 
+                result.message.content
+            },
+            conversationId: conversation._id.toString()
+          });
+        }
+
         return res.status(200).json({
-          messages: [
-            ...(conversationalResponse ? [{
-              role: 'assistant',
-              type: 'text',
-              content: conversationalResponse
-            }] : []),
-            result.message
-          ],
+          message: result.message,
           conversationId: conversation._id.toString()
         });
       }
+
+      // For chat messages, save and return
+      conversation.messages.push(message);
+      await conversation.save();
+
+      return res.status(200).json({
+        message,
+        conversationId: conversation._id.toString()
+      });
+
+    } catch (error) {
+      console.error('Error handling Venice response:', error);
+      return res.status(500).json({
+        error: 'Error processing message',
+        message: 'Sorry, there was an error processing your message. Please try again.'
+      });
     }
-
-    // Default to regular chat response
-    const regularResponse = {
-      role: 'assistant',
-      type: 'text',
-      content: conversationalResponse || "I'm not sure how to help with that. Would you like to place a bet, view open bets, or check your balance?"
-    };
-
-    conversation.messages.push(regularResponse);
-    await conversation.save();
-
-    return res.status(200).json({
-      message: regularResponse,
-      conversationId: conversation._id.toString()
-    });
 
   } catch (error) {
     console.error('Chat process error:', error);
-    return res.status(500).json({ message: 'Error processing chat' });
-  }
-}
-
-// Helper function to calculate payout
-function calculatePayout(stake, odds) {
-  const numOdds = parseInt(odds);
-  if (numOdds > 0) {
-    return stake + (stake * numOdds) / 100;
-  } else if (numOdds < 0) {
-    return stake + (stake * 100) / Math.abs(numOdds);
-  }
-  return stake;
-}
-
-// Add this function near the top with other handlers
-async function getOpenBets(userId) {
-  try {
-    const openBets = await Bet.find({
-      userId: { $ne: userId },
-      status: 'pending'
-    })
-    .sort({ createdAt: -1 })
-    .limit(50)  // Increased from 20 to 50
-    .lean();
-
-    // Add formatted timestamps and ensure all required fields
-    const formattedBets = openBets.map(bet => ({
-      ...bet,
-      formattedTime: new Date(bet.createdAt).toLocaleString(),
-      payout: bet.payout || calculatePayout(bet.stake, bet.odds).toFixed(2),
-      line: bet.line || '-'
-    }));
-
-    return {
-      success: true,
-      message: {
-        role: 'assistant',
-        type: 'open_bets',
-        content: JSON.stringify(formattedBets)
-      }
-    };
-  } catch (error) {
-    console.error('Error fetching open bets:', error);
-    return {
-      success: false,
-      error: 'Failed to fetch open bets'
-    };
-  }
-}
-
-// Add this function near the top with other handlers
-async function getUserBets(userId) {
-  try {
-    const userBets = await Bet.find({
-      userId: userId
-    })
-    .sort({ createdAt: -1 })
-    .limit(20)
-    .lean();
-
-    return {
-      success: true,
-      message: {
-        role: 'assistant',
-        type: 'open_bets',
-        content: JSON.stringify(userBets) // Stringify the content
-      }
-    };
-  } catch (error) {
-    console.error('Error fetching user bets:', error);
-    return {
-      success: false,
-      error: 'Failed to fetch your bets'
-    };
+    return res.status(500).json({ 
+      error: error.message || 'Internal server error',
+      message: 'Sorry, there was an error processing your message. Please try again.'
+    });
   }
 } 

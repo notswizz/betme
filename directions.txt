@@ -1,454 +1,237 @@
 # BetChat Application Architecture and Flow
 
 ## Overview
-BetChat is an AI-powered sports betting assistant that allows users to place bets through a chat interface. The application features a modern, gradient-rich UI with smooth animations and mobile-first design.
+BetChat is an AI-powered sports betting assistant that enables users to place bets through a sophisticated chat interface. The application features a modern, gradient-rich UI with real-time updates and mobile-first design.
 
 ## Core Components
 
-### 1. Side Menu Layout
-The side menu follows a vertical layout with three main sections:
-- Top: New Chat button for starting fresh conversations
-- Middle: Dynamic content area
-  * Token Balance with animated gradient icon and "+" button
-  * BetStats cards showing user statistics
-- Bottom: BetChat branding section
-  * Compact logo and title with minimal spacing
-  * Sits directly against content with 1px padding
-  * Subtle border separator with 50% opacity
+### 1. Message Processing Pipeline
+- User message → process.js
+- Authentication with JWT token
+- Token balance verification
+- Message type handling:
+  * Regular text messages
+  * Bet slips
+  * Image uploads (OCR)
+  * Action confirmations
+  * Bet success messages
+  * Open bets display
 
-#### Token Balance Component
-- Gradient background with blur effect
-- Animated token icon with radiating lines
-- Compact "+" button with hover animations
-- Expandable form for adding tokens
-- Real-time balance updates
+### 2. AI Integration
+- Venice AI Integration:
+  * Uses llama-3.3-70b model
+  * Structured responses:
+    - Conversational part (natural language)
+    - JSON intent part (structured data)
+  * Custom prompt system for betting context
+  * Intent analysis and action routing
+  * Memoized responses for performance
 
-#### BetStats Component
-Modern stat cards with:
-- Total Bets (156): Purple gradient icon
-- Pending (23): Amber gradient with rotating line animation
-- Won (89): Green gradient with checkmark
-- Accuracy (92%): Blue gradient with graph icon
-- Rank (#7): Pink gradient with star icon
-- Each stat has hover animations and pulse effects
+### 3. Image Processing
+- Tesseract.js OCR Integration:
+  * Betting-specific text cleanup
+  * Format standardization:
+    - Score formats (e.g., "1-0")
+    - Odds formats (e.g., "-110")
+    - Currency formatting
+    - Dates and times
+  * Team name normalization
+  * Betting terminology standardization
 
-### 2. Mobile Interface
-- Fixed header with centered BetChat logo and title
-- Slide-out menu with backdrop blur
-- Top-right logout icon button
-- Animated hamburger menu with smooth transitions
-- Full-height layout optimization
-- Bottom-anchored chat input
-- Responsive design with mobile-first approach
+### 4. Chat Interface
+Components:
+- ChatContainer.js: Main chat orchestration with memoization
+- ChatMessage.js: Message type rendering with optimized re-renders
+- ChatInput.js: Text & image input
+- BetSlipMessage.js: Memoized bet form handling
+- ActionConfirmation.js: Bet confirmation
+- BetSuccessMessage.js: Success display
+- OpenBetsView.js: Scrollable bet listings
 
-### 3. Chat Interface
-- Fixed header with:
-  * Centered BetChat logo and title
-  * Logout icon button
-  * Semi-transparent background with blur effect
-  * Border bottom for visual separation
-- Gradient message bubbles with:
-  * User messages in blue gradient
-  * AI messages in dark gradient with blur
-  * Animated AI avatar with pulsing effect
+Features:
+- Real-time message updates
 - Smart message grouping
-- Snap scrolling for smooth navigation
-- Quick action buttons in 2x2 grid layout:
-  * Place a Bet (🎯)
-  * Best Bets (🔥)
-  * Open Bets (📊)
-  * Check Balance (💰)
-- Compact aspect ratio (4:3) for prompt buttons
-- Hover effects and transitions
-- Proper spacing and padding
+- Mobile-responsive design
+- Image upload support
+- Loading states and animations
+- Error handling and recovery
+- Memoized components for performance
+- Optimized re-rendering
 
-### 4. Betting System
-Files involved:
-- `utils/betSubmission.js`: Bet submission logic
-- `models/Bet.js`: Bet data schema
-- `pages/api/bets/create.js`: Bet creation endpoint
-
-Supported bet types:
-- Spread
-- Moneyline
-- Over/Under
-- Parlay
-- Prop
-- Future
-
-Betting flow:
-1. User initiates bet (through chat or image)
-2. AI analyzes request via venice.js (using llama-3.3-70b model)
-3. Bet details structured and validated with comprehensive error checking:
-   - Valid bet type verification
-   - Stake amount validation
-   - User balance verification
-   - Odds calculation validation
-4. BetSlipMessage component displays bet details:
-   - Sport and type badges
-   - Team matchup with hover effects
-   - Line and odds display
-   - Stake and payout calculations
-   - Action buttons (Bet/Share)
-5. User confirms bet details
-6. Bet submitted to database
-7. Success confirmation displayed with:
-   - Animated success indicator
-   - Detailed bet information
-   - Bet ID for reference
-
-### 5. Open Bets Display
-- Horizontal scrollable container
-- Individual bet cards with:
-  * Sport & Type badges
-  * Team matchup display
-  * Line and odds information
-  * Stake and payout details
-  * Action buttons (Bet/Share)
-  * Timestamp display
-- Hover effects and animations
-- Proper overflow handling
-- Mobile-optimized layout
-
-### 6. Message Types
-1. Regular Messages:
-   - User/AI distinction
-   - Gradient backgrounds
-   - Proper spacing
-   - Animated AI avatar
-
-2. Bet Slip Messages:
-   - Structured bet information
-   - Visual confirmation options
-   - Detailed payout calculations
-
-3. Open Bets Messages:
-   - Scrollable bet cards
-   - Interactive elements
-   - Real-time updates
-
-4. Success Messages:
-   - Animated confirmation
-   - Detailed bet information
-   - Transaction ID display
-
-### 7. UI Components
-1. Header:
-   - Fixed positioning
-   - Blur effect background
-   - Centered title
-   - Logout icon button
-
-2. Side Menu:
-   - Responsive layout
-   - Mobile slide-out
-   - Backdrop blur
-   - Smooth transitions
-
-3. Chat Container:
-   - Full-height layout
-   - Proper overflow handling
-   - Bottom-anchored input
-   - Loading indicators
-
-4. Input Section:
-   - Image upload capability
-   - Send button
-   - Disabled states
-   - Processing indicators
-
-### 8. Technical Implementation
-1. State Management:
-   - React hooks for local state
-   - Context for global state
-   - Real-time updates
-   - Proper error handling
-
-2. API Integration:
-   - Venice AI for message processing
-   - MongoDB for data persistence
-   - JWT authentication
-   - WebSocket for real-time features
-
-3. Styling System:
-   - Tailwind CSS with custom utilities
-   - Gradient animations
-   - Responsive design
-   - Dark mode optimization
-
-4. Performance:
-   - Optimized animations
-   - Lazy loading
-   - Proper error boundaries
-   - Efficient state updates
-
-### 9. Security
-1. Authentication:
-   - JWT token validation
-   - Secure storage
-   - Automatic logout
-   - Session management
-
-2. Data Protection:
-   - Input sanitization
-   - API rate limiting
-   - Secure endpoints
-   - Error handling
-
-### 10. Future Improvements
-1. Enhanced Features:
-   - More bet types
-   - Advanced statistics
-   - Social features
-   - Notifications
-
-2. UI Enhancements:
-   - More animations
-   - Custom themes
-   - Accessibility improvements
-   - Mobile optimizations
-
-3. Performance:
-   - Caching strategies
-   - Code splitting
-   - Image optimization
-   - State management improvements
-
-4. Security:
-   - 2FA support
-   - Enhanced encryption
-   - Audit logging
-   - Rate limiting
-
-## Message Processing Pipeline
-Primary files:
-- `pages/api/chat/process.js`: Central message processing hub with comprehensive validation
-- `utils/convoAnalyze.js`: Message analysis and action handling
-- `utils/venice.js`: AI integration using llama-3.3-70b model for message understanding
-- `utils/tesseract.js`: OCR for bet slip processing
-
-Message flow:
-1. User sends message through ChatContainer.js
-2. Message is sent to /api/chat/process endpoint with JWT token
-3. Process.js:
-   - Verifies authentication and token validity
-   - Performs detailed message validation
-   - Checks token balance
-   - Manages conversation history
-   - Routes message to appropriate handler with error handling
-
-### Message Types and Handling
-
-#### Regular Messages
-Flow:
-1. Message received by process.js
-2. Sent to analyzeConversation in convoAnalyze.js
-3. Intent is analyzed, returns one of:
-   - direct: Immediate responses (balance, listings)
-   - action: Needs confirmation (bets, tokens)
-   - chat: Normal chat message
-4. Response is generated and returned to UI
-
-#### Action Confirmation
-Flow:
-1. User confirms action in UI
-2. Confirmation sent to process.js
-3. handleAction in convoAnalyze.js processes it
-4. Action is executed (place bet, add tokens, etc.)
-5. Confirmation message returned to UI
-
-#### Image Processing
-Flow:
-1. User uploads bet slip image
-2. tesseract.js extracts text
-3. Text analyzed by AI through venice.js
-4. Structured bet data created
-5. Bet slip form displayed for confirmation
-
-## Technical Details
-
-### Database Integration
-Models:
-- `models/User.js`: User data and token balance
-- `models/Bet.js`: Bet records
-- `models/Conversation.js`: Chat history
-- `utils/mongodb.js`: Database connection
-
-Database operations:
-1. Conversation tracking
-2. Bet recording
-3. Balance management
-4. User data storage
-5. Stats and reputation tracking
-
-### API Structure
-1. Chat Processing:
-   ```
-   /api/chat/process
-   - Handles all message types
-   - Routes to appropriate handlers
-   - Manages conversation state
-   ```
-
-2. Actions:
-   ```
-   /api/bets/create
-   /api/bets/stats
-   /api/actions/balance
-   /api/actions/listing
-   - Handle specific actions
-   - Require authentication
-   - Return structured responses
-   ```
-
-### Error Handling
-1. Authentication:
-   - Token validation
-   - Session management
-   - Access control
-   - Automatic logout on token expiry
-
-2. Action Processing:
-   - Input validation
-   - Balance checks
-   - Data validation
-   - Error messages to UI
-
-3. Message Processing:
-   - AI processing errors
-   - Invalid actions
-   - Rate limiting
-
-### Environment Requirements
-Required variables:
-- MONGODB_URI: Database connection
-- JWT_SECRET: Authentication
-- AI_API_KEY: Venice AI integration
-
-## Development Notes
-
-### State Management
-1. Server State:
-   - MongoDB for persistence
-   - Conversation tracking
-   - User data and stats
-
-2. Client State:
-   - React state for UI
-   - localStorage for auth
-   - Real-time updates
-
-### Security
-1. Authentication:
-   - JWT validation
-   - Token expiration
-   - Secure storage
-   - Logout functionality
-
-2. Data Validation:
-   - Input sanitization
-   - Schema validation
-   - Type checking
-
-### Error Recovery
-1. Token Issues:
-   - Auto refresh
-   - Re-authentication
-   - Clear invalid tokens
-
-2. Action Failures:
-   - Retry logic
-   - Error messages
-   - State recovery
-
-## Technical Implementation
-
-### 1. Styling System
-Using Tailwind CSS with custom utilities:
-```css
-.animate-gradient-x {
-  background-size: 200% 200%;
-  animation: gradient-x 3s ease infinite;
+### 5. Betting System
+Data Structure (Bet.js):
+```javascript
+{
+  userId: ObjectId,
+  type: ["Spread", "Moneyline", "Over/Under", "Parlay", "Prop", "Future"],
+  sport: String,
+  team1: String,
+  team2: String,
+  line: String, // 'ML' for Moneyline bets
+  odds: Number,
+  stake: Number,
+  payout: Number,
+  status: ["pending", "won", "lost", "cancelled"],
+  createdAt: Date,
+  updatedAt: Date
 }
 ```
 
-### 2. Component Structure
-Modular components with clear separation:
-- Layout components (ChatContainer, SideMenu)
-- Feature components (TokenBalance, BetStats)
-- UI components (buttons, cards, icons)
+Betting Flow:
+1. User initiates bet (text/image)
+2. AI processes request:
+   - Intent analysis
+   - Bet type detection
+   - Team/odds extraction
+3. BetSlipMessage displays form:
+   - Sport & type selection
+   - Team input with validation
+   - Line & odds with ML handling
+   - Memoized stake & payout calculation
+4. Real-time payout calculation:
+   ```javascript
+   const calculatePayout = useCallback((stake, odds) => {
+     if (odds > 0) {
+       return stake + (stake * odds) / 100;
+     } else {
+       return stake + (stake * 100) / Math.abs(odds);
+     }
+   }, []);
+   ```
+5. User confirms bet
+6. Success confirmation with bet ID and details
 
-### 3. State Management
-- React hooks for local state
-- Context for global state
-- Real-time updates via WebSocket
+### 6. UI Components
+1. Side Menu:
+   - New chat button
+   - Token balance
+   - Bet statistics
+   - Mobile slide-out with blur
+   - Memoized components
 
-### 4. Mobile Optimization
-- Responsive breakpoints
-- Touch-friendly interfaces
-- Performance optimization
+2. Chat Messages:
+   - Gradient backgrounds
+   - Role-based styling
+   - Type-specific rendering
+   - Interactive elements
+   - Optimized re-renders
 
-### 5. Animation System
-- CSS transitions
-- React state-based animations
-- Gradient animations
-- Hover effects
+3. Bet Display:
+   - Sport & type badges
+   - Team matchup
+   - Line & odds with ML support
+   - Stake & payout
+   - Action buttons
+   - Scrollable layout
+
+### 7. Error Handling
+1. API Errors:
+   - Token validation
+   - Balance checks
+   - Rate limiting
+   - Fallback responses
+   - Detailed error messages
+
+2. Image Processing:
+   - OCR failure handling
+   - Format validation
+   - Fallback to manual input
+   - Error recovery
+
+3. Bet Validation:
+   - Input validation
+   - Balance verification
+   - Odds calculation
+   - Status tracking
+   - Line validation for bet types
+
+### 8. State Management
+1. Conversation State:
+   - Message history
+   - Conversation ID
+   - Loading states
+   - Error states
+   - Memoized updates
+
+2. User State:
+   - Authentication
+   - Token balance
+   - Bet history
+   - Statistics
+   - Cached data
+
+3. UI State:
+   - Mobile menu
+   - Form states
+   - Loading indicators
+   - Error messages
+   - Optimized updates
+
+### 9. Security
+1. Authentication:
+   - JWT tokens
+   - Token validation
+   - Session management
+   - Secure storage
+   - Rate limiting
+
+2. API Security:
+   - Rate limiting
+   - Input sanitization
+   - Error handling
+   - Secure endpoints
+   - Data validation
+
+### 10. Mobile Optimization
+1. Responsive Design:
+   - Mobile-first approach
+   - Touch-friendly inputs
+   - Slide-out menu
+   - Bottom-anchored input
+   - Adaptive layouts
+
+2. Performance:
+   - Optimized images
+   - Efficient state updates
+   - Smooth animations
+   - Loading states
+   - Memoized components
+   - Reduced re-renders
 
 ## Development Guidelines
 
-### 1. Styling Conventions
-- Use Tailwind classes
-- Follow gradient pattern:
-  ```jsx
-  className="bg-gradient-to-br from-gray-900/95 to-gray-800/95"
-  ```
-- Maintain consistent spacing
-- Use relative units
+### 1. Component Structure
+- Maintain separation of concerns
+- Use TypeScript for type safety
+- Follow React best practices
+- Implement proper error boundaries
+- Use memoization where beneficial
 
-### 2. Component Organization
-- Keep components focused
-- Share common styles
-- Maintain consistent structure
+### 2. Styling
+- Use Tailwind CSS
+- Maintain consistent gradients
+- Follow spacing system
+- Ensure accessibility
+- Optimize for mobile
 
-### 3. Mobile First
-- Design for mobile first
-- Add desktop enhancements
-- Test on multiple devices
+### 3. Error Handling
+- Provide user feedback
+- Implement fallbacks
+- Log errors properly
+- Maintain state consistency
+- Validate inputs
 
-### 4. Performance
-- Optimize animations
-- Lazy load components
+### 4. Testing
+- Unit test components
+- Test API endpoints
+- Validate bet calculations
+- Check error scenarios
+- Test mobile responsiveness
+
+### 5. Performance
+- Optimize bundle size
+- Implement lazy loading
+- Cache API responses
+- Monitor metrics
 - Minimize re-renders
-
-### 5. Accessibility
-- Semantic HTML
-- ARIA labels
-- Keyboard navigation
-- Color contrast
-
-## Error Handling
-1. User Feedback:
-   - Clear error messages
-   - Loading states
-   - Success confirmations
-
-2. Recovery:
-   - Retry mechanisms
-   - Fallback UI
-   - State restoration
-
-## Future Improvements
-1. Enhanced Animations:
-   - More fluid transitions
-   - Reduced motion options
-   - Performance optimization
-
-2. Better Mobile UX:
-   - Gesture controls
-   - Haptic feedback
-   - Native-like feel
-
-3. Accessibility:
-   - Screen reader support
-   - Keyboard shortcuts
-   - High contrast mode 
+- Use memoization effectively 

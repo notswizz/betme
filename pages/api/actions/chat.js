@@ -5,9 +5,10 @@ export async function handleNormalChat(messages) {
 }
 
 // Add this helper function to fix unquoted JSON keys
-function fixJsonKeys(str) {
-  // Add quotes around unquoted keys
-  return str.replace(/(\s*?{\s*?|\s*?,\s*?)(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '$1"$3":');
+function fixJsonKeys(jsonStr) {
+  // Remove any non-JSON content before the first {
+  const cleanStr = jsonStr.substring(jsonStr.indexOf('{'));
+  return cleanStr.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":');
 }
 
 export async function analyzeIntent(message) {
@@ -32,6 +33,27 @@ export async function analyzeIntent(message) {
     }
   } catch (error) {
     console.error('Error in analyzeIntent:', error);
+    return null;
+  }
+}
+
+function parse(jsonStr) {
+  // Try to find JSON object at the end of the string
+  const jsonMatch = jsonStr.match(/\{[\s\S]*\}$/);
+  
+  if (!jsonMatch) {
+    console.log('No JSON found in response');
+    return null;
+  }
+
+  try {
+    // Extract just the JSON part
+    const jsonPart = jsonMatch[0];
+    const fixedJson = fixJsonKeys(jsonPart);
+    return JSON.parse(fixedJson);
+  } catch (error) {
+    console.error('Error parsing AI intent:', error);
+    console.error('Raw response:', jsonStr);
     return null;
   }
 } 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { submitBet } from '../../utils/betSubmission';
 
 const SPORTS = [
@@ -9,82 +9,154 @@ const BET_TYPES = [
   "Spread", "Moneyline", "Over/Under", "Parlay", "Prop", "Future"
 ];
 
-export default function BetSlipMessage({ initialData, onSubmit }) {
-  const [betSlip, setBetSlip] = useState(initialData);
+const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
+  const [betSlip, setBetSlip] = useState(() => ({
+    type: initialData.type || 'Spread',
+    sport: initialData.sport || 'NFL',
+    team1: initialData.team1 || '',
+    team2: initialData.team2 || '',
+    line: initialData.type === 'Moneyline' ? 'ML' : (initialData.line || ''),
+    odds: initialData.odds || '-110',
+    pick: initialData.pick || initialData.team1 || '',
+    stake: parseFloat(initialData.stake || '10'),
+    payout: parseFloat(initialData.payout || '19.52')
+  }));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState(null);
 
-  // Add effect to handle Moneyline bet type
-  useEffect(() => {
-    if (betSlip.type === 'Moneyline') {
-      setBetSlip(prev => ({
-        ...prev,
-        line: 'ML'
-      }));
+  // Memoize the payout calculation
+  const calculatePayout = useCallback((stake, odds) => {
+    if (!stake || !odds) return 0;
+    const numStake = parseFloat(stake);
+    const numOdds = parseInt(odds.replace(/[^-\d]/g, ''));
+    
+    if (isNaN(numStake) || isNaN(numOdds)) return 0;
+    
+    if (numOdds > 0) {
+      return numStake + (numStake * numOdds) / 100;
+    } else if (numOdds < 0) {
+      return numStake + (numStake * 100) / Math.abs(numOdds);
     }
-  }, [betSlip.type]);
+    return numStake;
+  }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const result = await submitBet(betSlip);
-      if (result.success) {
-        // Send the bet data directly instead of the success message
-        onSubmit({
-          name: 'place_bet',
-          type: betSlip.type,
-          sport: betSlip.sport,
-          team1: betSlip.team1,
-          team2: betSlip.team2,
-          line: betSlip.line,
-          odds: betSlip.odds,
-          stake: parseFloat(betSlip.stake),
-          payout: betSlip.payout
-        });
-        setIsSubmitted(true);
-      } else {
-        setError('Failed to place bet. Please try again.');
-      }
-    } catch (err) {
-      setError('Failed to place bet. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Calculate potential payout whenever stake or odds change
+  // Update payout when stake or odds change
   useEffect(() => {
-    const calculatePayout = () => {
-      const stake = parseFloat(betSlip.stake) || 0;
-      const odds = parseInt(betSlip.odds) || 0;
-      
-      let payout = stake;
-      if (odds > 0) {
-        payout += (stake * odds) / 100;
-      } else if (odds < 0) {
-        payout += (stake * 100) / Math.abs(odds);
-      }
-      
+    const payout = calculatePayout(betSlip.stake, betSlip.odds);
+    if (payout !== parseFloat(betSlip.payout)) {
       setBetSlip(prev => ({
         ...prev,
         payout: payout.toFixed(2)
       }));
+    }
+  }, [betSlip.stake, betSlip.odds, calculatePayout]);
+
+  // Handle bet type changes
+  const handleBetTypeChange = useCallback((type) => {
+    setBetSlip(prev => ({
+      ...prev,
+      type,
+      line: type === 'Moneyline' ? 'ML' : prev.line
+    }));
+  }, []);
+
+  const handleSubmit = useCallback((e) => {
+    e.preventDefault();
+    if (isSubmitting || isSubmitted) return;
+
+    // Validate required fields
+    if (!betSlip.team1 || !betSlip.team2) {
+      setError('Both teams are required');
+      return;
+    }
+
+    if (!betSlip.odds) {
+      setError('Odds are required');
+      return;
+    }
+
+    // Ensure line is set for Moneyline bets
+    const submissionData = {
+      ...betSlip,
+      line: betSlip.type === 'Moneyline' ? 'ML' : betSlip.line
     };
 
-    calculatePayout();
-  }, [betSlip.stake, betSlip.odds]);
+    setIsSubmitting(true);
+    
+    try {
+      const confirmationMessage = {
+        role: 'assistant',
+        type: 'text',
+        requiresConfirmation: true,
+        content: `Would you like to place this bet?\n` +
+                `${submissionData.team1} vs ${submissionData.team2}\n` +
+                `${submissionData.type} bet @ ${submissionData.odds}\n` +
+                `Line: ${submissionData.line}\n` +
+                `Stake: $${submissionData.stake}\n` +
+                `Potential Payout: $${submissionData.payout}`,
+        action: {
+          name: 'place_bet',
+          ...submissionData,
+          status: 'pending'
+        }
+      };
 
-  // If bet is submitted, don't show the form
+      onSubmit(confirmationMessage);
+      setIsSubmitted(true);
+    } catch (err) {
+      console.error('Error submitting bet:', err);
+      setError('Failed to submit bet. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [betSlip, isSubmitting, isSubmitted, onSubmit]);
+
+  // If bet is submitted, show a nice success message
   if (isSubmitted) {
     return (
-      <div className="w-full p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
-        <div className="flex items-center gap-2 text-green-400">
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          <span className="text-sm font-medium">Bet submitted for confirmation...</span>
+      <div className="w-full p-4 rounded-xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50">
+        <div className="flex items-start gap-4">
+          <div className="relative flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-xl bg-green-500/20 animate-ping"></div>
+              <span className="text-xl relative">✓</span>
+            </div>
+          </div>
+          <div className="flex-1">
+            <div className="text-base font-semibold text-green-400 mb-2">Bet Submitted!</div>
+            <div className="bg-gray-900/50 rounded-lg p-3 space-y-2 text-sm border border-gray-700/30">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div className="text-gray-300">
+                  <span className="text-gray-500 font-medium">{betSlip.type}</span>
+                  <span className="text-gray-600 mx-2">•</span>
+                  <span className="text-blue-400">{betSlip.sport}</span>
+                </div>
+                <div className="text-gray-300 text-right">
+                  <span className="text-gray-500">Line:</span> {betSlip.line}
+                </div>
+                <div className="col-span-2 text-gray-300 py-1 border-y border-gray-700/30 my-1">
+                  <div className="flex items-center justify-between">
+                    <span>{betSlip.team1}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800/50 border border-gray-700/30">VS</span>
+                    <span>{betSlip.team2}</span>
+                  </div>
+                </div>
+                <div className="text-gray-300">
+                  <span className="text-gray-500">Odds:</span> {betSlip.odds}
+                </div>
+                <div className="text-gray-300 text-right">
+                  <span className="text-gray-500">Stake:</span> ${parseFloat(betSlip.stake).toFixed(2)}
+                </div>
+              </div>
+              <div className="pt-2 mt-2 border-t border-gray-700/30">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Potential Payout:</span>
+                  <span className="text-lg font-semibold text-green-400">${parseFloat(betSlip.payout).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -102,7 +174,7 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
           <div className="col-span-1">
             <select
               value={betSlip.type}
-              onChange={(e) => setBetSlip({...betSlip, type: e.target.value})}
+              onChange={(e) => handleBetTypeChange(e.target.value)}
               className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
             >
               <option value="">Type</option>
@@ -126,7 +198,7 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
           <div className="col-span-1">
             <input
               type="text"
-              value={betSlip.line}
+              value={betSlip.type === 'Moneyline' ? 'ML' : betSlip.line}
               onChange={(e) => setBetSlip({...betSlip, line: e.target.value})}
               disabled={betSlip.type === 'Moneyline'}
               placeholder="Line"
@@ -210,4 +282,7 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
       </form>
     </div>
   );
-} 
+});
+
+export { BetSlipMessage };
+export default BetSlipMessage; 

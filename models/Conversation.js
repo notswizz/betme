@@ -10,7 +10,7 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: false,
     default: 'text',
-    enum: ['text', 'betslip', 'open_bets', 'image']
+    enum: ['text', 'betslip', 'open_bets', 'image', 'bet_success']
   },
   content: {
     type: mongoose.Schema.Types.Mixed,
