@@ -4,43 +4,34 @@ export async function handleNormalChat(messages) {
   return await generateAIResponse(messages);
 }
 
+// Add this helper function to fix unquoted JSON keys
+function fixJsonKeys(str) {
+  // Add quotes around unquoted keys
+  return str.replace(/(\s*?{\s*?|\s*?,\s*?)(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '$1"$3":');
+}
+
 export async function analyzeIntent(message) {
   try {
-    const analysis = await generateAIResponse([
-      {
-        role: "system",
-        content: `You are an intent analyzer. Analyze the user's message and respond with a JSON object containing:
-        - intent: "check_balance" | "add_tokens" | "create_listing" | "view_listings" | "other"
-        - amount: number (if adding tokens)
-        - listingTitle: string (if creating listing)
-        - listingPrice: number (if creating listing)
-        - confidence: number (0-1)
-        
-        Respond ONLY with the JSON object, no other text.`
-      },
-      {
-        role: "user",
-        content: message
-      }
-    ]);
-
-    // Clean the response before parsing
-    let jsonStr = analysis.content.trim();
-    // Remove any markdown code block markers
-    jsonStr = jsonStr.replace(/```json\s*|\s*```/g, '');
+    const aiResponse = await generateAIResponse([{ role: 'user', content: message }]);
+    const jsonStr = typeof aiResponse === 'string' ? aiResponse : aiResponse.content;
     
     try {
+      // First try to parse as-is
       return JSON.parse(jsonStr);
     } catch (error) {
-      console.error('Error parsing AI intent:', error);
-      console.error('Raw response:', jsonStr);
-      return {
-        intent: "other",
-        confidence: 0
-      };
+      // If that fails, try to fix unquoted keys and parse again
+      const fixedJson = fixJsonKeys(jsonStr);
+      try {
+        return JSON.parse(fixedJson);
+      } catch (secondError) {
+        console.error('Error parsing AI intent:', secondError);
+        console.error('Raw response:', jsonStr);
+        console.error('Fixed response attempt:', fixedJson);
+        return null;
+      }
     }
   } catch (error) {
-    console.error('Error analyzing intent:', error);
+    console.error('Error in analyzeIntent:', error);
     return null;
   }
 } 

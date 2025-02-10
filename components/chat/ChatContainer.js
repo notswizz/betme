@@ -6,13 +6,16 @@ import TokenBalance from '../wallet/TokenBalance';
 import BetStats from '../wallet/BetStats';
 import Scoreboard from '../scoreboard/Scoreboard';
 import { isAuthenticated } from '@/utils/auth';
+import { useRouter } from 'next/router';
 
 export default function ChatContainer() {
   const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [conversationId, setConversationId] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const messagesEndRef = useRef(null);
+  const router = useRouter();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -28,158 +31,132 @@ export default function ChatContainer() {
     setConversationId(null);
   };
 
-  const handleSendMessage = async (content) => {
+  const handleNewMessage = async (message, type = 'text') => {
     try {
-      setLoading(true);
+      setIsLoading(true);
+      setError(null);
 
-      // Handle bet slip and image messages locally (no API call needed)
-      if (typeof content === 'object' && (content.type === 'image' || content.type === 'betslip')) {
-        setMessages(prev => [...prev, content]);
-        setLoading(false);
-        return;
-      }
-
-      // Add user message immediately
-      const userMessage = {
+      // Add user message to UI immediately
+      const userMessage = typeof message === 'object' ? message : {
         role: 'user',
-        content: typeof content === 'string' ? content : content.content,
-        type: content.type || 'text'
+        type: type,
+        content: message
       };
+      
+      // Debug logging
+      console.log('Sending message:', userMessage);
       
       setMessages(prev => [...prev, userMessage]);
 
-      // Only send text messages to API
-      const res = await fetch('/api/chat/process', {
+      // Get auth token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      // Send message to API
+      const response = await fetch('/api/chat/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          message: content,
+          message: userMessage,
           conversationId,
-        }),
+          type
+        })
       });
 
-      const data = await res.json();
-      
-      if (res.ok) {
-        setConversationId(data.conversationId);
-        // Add AI response
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: data.message.content,
-          type: data.message.type || 'text'
-        }]);
+      // Debug logging
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to process message');
       }
+
+      // Update conversation ID
+      if (data.conversationId) {
+        setConversationId(data.conversationId);
+      }
+
+      // Handle multiple messages in response
+      if (Array.isArray(data.messages)) {
+        setMessages(prev => [...prev, ...data.messages]);
+      } 
+      // Handle single message response
+      else if (data.message) {
+        setMessages(prev => [...prev, data.message]);
+      }
+
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Chat error:', error);
+      setError(error.message);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        type: 'text',
+        content: 'Sorry, there was an error processing your message. Please try again.'
+      }]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleConfirmAction = async (action) => {
     try {
-      setLoading(true);
+      setIsLoading(true);
+      setError(null);
 
-      // Check authentication first
       const token = localStorage.getItem('token');
       if (!token) {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: 'Please login to perform this action.',
-          type: 'text'
-        }]);
+        router.push('/login');
         return;
       }
 
-      // Handle bet placement directly if it's a bet action
-      if (action.name === 'place_bet') {
-        try {
-          const result = await fetch('/api/bets/create', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              type: action.type,
-              sport: action.sport,
-              team1: action.team1,
-              team2: action.team2,
-              line: action.line,
-              odds: parseInt(action.odds),
-              stake: parseFloat(action.stake),
-              payout: parseFloat(action.payout)
-            })
-          });
-
-          const data = await result.json();
-
-          if (!result.ok) {
-            throw new Error(data.message || 'Failed to place bet');
-          }
-
-          // Add success message with bet details
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            type: 'bet_success',
-            content: data.bet
-          }]);
-          return;
-        } catch (error) {
-          console.error('Error placing bet:', error);
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: error.message || 'Failed to place bet. Please try again.',
-            type: 'text'
-          }]);
-          return;
-        }
-      }
-
-      // Handle other actions through chat process
       const response = await fetch('/api/chat/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           confirmAction: action,
-          conversationId: conversationId
+          conversationId
         })
       });
-      
+
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to confirm action');
+        throw new Error(data.message || 'Failed to process action');
       }
 
-      // Update messages with response
+      // Update messages with confirmation response
       if (data.message) {
         setMessages(prev => [...prev, data.message]);
       }
 
     } catch (error) {
-      console.error('Error confirming action:', error);
+      console.error('Action error:', error);
+      setError(error.message);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: error.message || 'Failed to confirm action. Please try again.',
-        type: 'text'
+        type: 'text',
+        content: 'Sorry, there was an error processing your action. Please try again.'
       }]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleCancelAction = () => {
     setMessages(prev => [...prev, {
       role: 'assistant',
-      content: 'Action cancelled.',
-      type: 'text'
+      type: 'text',
+      content: 'Action cancelled. What would you like to do instead?'
     }]);
   };
 
@@ -284,7 +261,7 @@ export default function ChatContainer() {
                 <Scoreboard />
                 <div className="mt-6 grid grid-cols-2 gap-3 max-w-2xl mx-auto px-4">
                   <button
-                    onClick={() => handleSendMessage("I want to place a bet")}
+                    onClick={() => handleNewMessage("I want to place a bet")}
                     className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
                   >
                     <span className="flex items-center gap-2">
@@ -293,7 +270,7 @@ export default function ChatContainer() {
                     </span>
                   </button>
                   <button
-                    onClick={() => handleSendMessage("Show me today's best bets")}
+                    onClick={() => handleNewMessage("Show me today's best bets")}
                     className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
                   >
                     <span className="flex items-center gap-2">
@@ -302,7 +279,7 @@ export default function ChatContainer() {
                     </span>
                   </button>
                   <button
-                    onClick={() => handleSendMessage("Show me today's scores")}
+                    onClick={() => handleNewMessage("Show me today's scores")}
                     className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
                   >
                     <span className="flex items-center gap-2">
@@ -311,7 +288,7 @@ export default function ChatContainer() {
                     </span>
                   </button>
                   <button
-                    onClick={() => handleSendMessage("What's my token balance?")}
+                    onClick={() => handleNewMessage("What's my token balance?")}
                     className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
                   >
                     <span className="flex items-center gap-2">
@@ -329,22 +306,30 @@ export default function ChatContainer() {
                   <ChatMessage
                     message={msg}
                     onConfirmAction={handleConfirmAction}
-                    onCancelAction={() => {
-                      setMessages(prev => prev.slice(0, -1));
-                    }}
+                    onCancelAction={handleCancelAction}
                   />
                 </div>
               ))}
               <div ref={messagesEndRef} className="h-4" />
             </>
           )}
+          {isLoading && (
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-100"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-200"></div>
+            </div>
+          )}
+          {error && (
+            <div className="text-red-500 text-sm">{error}</div>
+          )}
         </div>
 
         {/* Input Section */}
         <div className="sticky bottom-0 left-0 right-0 p-4 bg-gray-900/80 backdrop-blur-lg border-t border-gray-800">
           <ChatInput 
-            onSendMessage={handleSendMessage}
-            disabled={loading}
+            onSubmit={handleNewMessage}
+            isLoading={isLoading}
           />
         </div>
       </div>

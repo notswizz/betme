@@ -19,6 +19,7 @@ const DIRECT_RESPONSES = {
   BALANCE_CHECK: 'balance_check',
   VIEW_LISTINGS: 'view_listings',
   VIEW_BETS: 'view_bets',
+  VIEW_OPEN_BETS: 'view_open_bets',
   // Add new direct actions here
 };
 
@@ -27,65 +28,54 @@ const DIRECT_RESPONSES = {
  */
 export async function analyzeConversation(messages) {
   const lastMessage = messages[messages.length - 1].content;
-  const intent = await analyzeIntent(lastMessage);
+  const aiResponse = await analyzeIntent(lastMessage);
 
-  if (!intent || intent.confidence < 0.7) {
+  // If we got no response from the AI, default to chat
+  if (!aiResponse) {
+    console.log('No valid AI response, defaulting to chat');
     return { type: 'chat' };
   }
 
-  switch (intent.intent) {
-    case 'check_balance':
-      return { type: 'direct', action: DIRECT_RESPONSES.BALANCE_CHECK };
-    case 'view_listings':
-      return { type: 'direct', action: DIRECT_RESPONSES.VIEW_LISTINGS };
-    case 'add_tokens':
-      return {
-        type: 'action',
-        content: `Would you like to add ${intent.amount} tokens to your balance?`,
-        tool_calls: [{
-          name: 'add_tokens',
-          amount: intent.amount
-        }]
-      };
-    case 'create_listing':
-      return {
-        type: 'action',
-        content: `Would you like to create a listing for "${intent.listingTitle}" priced at ${intent.listingPrice} tokens?`,
-        tool_calls: [{
-          name: 'create_listing',
-          listingTitle: intent.listingTitle,
-          listingPrice: intent.listingPrice
-        }]
-      };
-    case 'place_bet':
-      // Ensure we have all required fields
-      if (!intent.type || !intent.sport || !intent.stake) {
-        return { type: 'chat' };
-      }
+  console.log('Parsed AI response:', aiResponse);
 
-      const betData = {
-        type: intent.type,
-        sport: intent.sport,
-        team1: intent.team1 || '',
-        team2: intent.team2 || '',
-        line: intent.line || '',
-        odds: intent.odds || -110, // Default odds if not specified
-        stake: parseFloat(intent.stake) || 0
-      };
-
-      return {
-        type: 'action',
-        content: `Would you like to place a ${betData.type} bet on ${betData.sport}?`,
-        tool_calls: [{
-          name: 'place_bet',
-          ...betData
-        }]
-      };
-    case 'view_bets':
-      return { type: 'direct', action: DIRECT_RESPONSES.VIEW_BETS };
-    default:
-      return { type: 'chat' };
+  // Handle viewing intents
+  if (aiResponse.intent) {
+    switch (aiResponse.intent) {
+      case 'view_open_bets':
+        return { type: 'direct', action: DIRECT_RESPONSES.VIEW_OPEN_BETS };
+      case 'view_bets':
+        return { type: 'direct', action: DIRECT_RESPONSES.VIEW_BETS };
+      case 'check_balance':
+        return { type: 'direct', action: DIRECT_RESPONSES.BALANCE_CHECK };
+      case 'view_listings':
+        return { type: 'direct', action: DIRECT_RESPONSES.VIEW_LISTINGS };
+    }
   }
+
+  // If it's a betting intent, handle bet data
+  if (aiResponse.type && aiResponse.sport) {
+    const betData = {
+      type: aiResponse.type,
+      sport: aiResponse.sport,
+      team1: aiResponse.team1 || '',
+      team2: aiResponse.team2 || '',
+      line: aiResponse.line || '',
+      odds: aiResponse.odds || -110,
+      stake: parseFloat(aiResponse.stake) || 10
+    };
+
+    return {
+      type: 'action',
+      content: `Would you like to place a ${betData.type} bet on ${betData.sport}?`,
+      tool_calls: [{
+        name: 'place_bet',
+        ...betData
+      }]
+    };
+  }
+
+  // Default to chat if no clear intent
+  return { type: 'chat' };
 }
 
 /**

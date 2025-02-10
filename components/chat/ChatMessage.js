@@ -2,6 +2,108 @@ import ActionConfirmation from './ActionConfirmation';
 import ListingView from './ListingView';
 import BetSlipMessage from './BetSlipMessage';
 
+// Add this new component for open bets display
+function OpenBetsView({ bets, onPlaceSimilar }) {
+  // Parse the stringified bets if needed
+  const parsedBets = typeof bets === 'string' ? JSON.parse(bets) : bets;
+  
+  if (!parsedBets || parsedBets.length === 0) {
+    return (
+      <div className="w-full p-6 rounded-2xl bg-gradient-to-br from-gray-900/95 to-gray-800/95 text-center">
+        <div className="text-gray-400">No open bets available right now</div>
+        <div className="text-sm text-gray-500 mt-2">Check back later for new bets</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full overflow-x-auto snap-x snap-mandatory flex space-x-4 pb-4 hide-scrollbar">
+      {parsedBets.map((bet) => (
+        <div
+          key={bet._id}
+          className="snap-center flex-none w-[300px] first:ml-4 last:mr-4"
+        >
+          <div className="relative group transform transition-all duration-300 hover:scale-[1.02]">
+            {/* Animated gradient border */}
+            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-gradient-x opacity-70 blur-[1px] group-hover:opacity-100"></div>
+            
+            {/* Card Content */}
+            <div className="relative rounded-2xl bg-gradient-to-br from-gray-900/95 to-gray-800/95 p-4 shadow-xl backdrop-blur-sm border border-gray-700/30">
+              {/* Sport & Type Badge */}
+              <div className="flex justify-between items-center mb-3">
+                <span className="px-3 py-1 bg-blue-500/20 rounded-full text-blue-400 text-xs font-medium">
+                  {bet.sport}
+                </span>
+                <span className="px-3 py-1 bg-purple-500/20 rounded-full text-purple-400 text-xs font-medium">
+                  {bet.type}
+                </span>
+              </div>
+
+              {/* Teams */}
+              <div className="space-y-2 mb-4">
+                <div className="text-white font-medium truncate">{bet.team1}</div>
+                <div className="flex items-center justify-center">
+                  <span className="text-xs px-3 py-1 rounded-full bg-gray-800/50 text-gray-400 font-medium">VS</span>
+                </div>
+                <div className="text-white font-medium truncate">{bet.team2}</div>
+              </div>
+
+              {/* Bet Details */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-gray-800/30 rounded-lg p-2">
+                  <div className="text-xs text-gray-400">Line</div>
+                  <div className="text-white font-medium">{bet.line || '-'}</div>
+                </div>
+                <div className="bg-gray-800/30 rounded-lg p-2">
+                  <div className="text-xs text-gray-400">Odds</div>
+                  <div className="text-white font-medium">{bet.odds}</div>
+                </div>
+                <div className="bg-gray-800/30 rounded-lg p-2">
+                  <div className="text-xs text-gray-400">Stake</div>
+                  <div className="text-white font-medium">${bet.stake}</div>
+                </div>
+                <div className="bg-gray-800/30 rounded-lg p-2">
+                  <div className="text-xs text-gray-400">Payout</div>
+                  <div className="text-green-400 font-medium">${bet.payout}</div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onPlaceSimilar(bet)}
+                  className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg"
+                >
+                  Place Similar
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(bet._id);
+                    // You could add a toast notification here
+                  }}
+                  className="px-3 py-2 bg-gradient-to-r from-gray-700 to-gray-800 text-white rounded-lg text-sm font-medium hover:from-gray-600 hover:to-gray-700 transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg"
+                >
+                  Share
+                </button>
+              </div>
+
+              {/* Time Indicator */}
+              <div className="absolute top-2 right-2">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-gray-400">
+                    {new Date(bet.createdAt).toLocaleTimeString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ChatMessage({ message, onConfirmAction, onCancelAction }) {
   const isUser = message.role === 'user';
 
@@ -307,6 +409,43 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
               <span className="text-white text-sm md:text-base font-medium">You</span>
             </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // Add this new condition for open bets display
+  if (message.type === 'open_bets') {
+    return (
+      <div className="w-full mb-4">
+        <div className="flex justify-start items-start space-x-3">
+          <div className="relative w-9 h-9 rounded-xl shadow-lg group">
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-90"></div>
+            <div className="absolute inset-[1px] rounded-xl bg-gray-900 flex items-center justify-center">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-7 h-7 bg-blue-500/20 rounded-xl animate-ping"></div>
+                <span className="relative text-sm font-medium bg-gradient-to-r from-blue-400 to-blue-300 text-transparent bg-clip-text">AI</span>
+              </div>
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-white font-medium mb-3">Recent Open Bets</h3>
+            <OpenBetsView 
+              bets={message.content} 
+              onPlaceSimilar={(bet) => {
+                onConfirmAction({
+                  name: 'place_bet',
+                  type: bet.type,
+                  sport: bet.sport,
+                  team1: bet.team1,
+                  team2: bet.team2,
+                  line: bet.line,
+                  odds: bet.odds,
+                  stake: bet.stake
+                });
+              }}
+            />
+          </div>
         </div>
       </div>
     );

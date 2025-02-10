@@ -4,7 +4,7 @@ import { extractText } from '@/utils/tesseract';
 import { generateAIResponse } from '@/utils/venice';
 import { FaCamera } from 'react-icons/fa';
 
-export default function ChatInput({ onSendMessage, disabled }) {
+export default function ChatInput({ onSubmit, isLoading }) {
   const [message, setMessage] = useState('');
   const [processing, setProcessing] = useState(false);
 
@@ -12,7 +12,17 @@ export default function ChatInput({ onSendMessage, disabled }) {
     e.preventDefault();
     if (!message.trim()) return;
     
-    onSendMessage(message);
+    // Create message object
+    const messageObject = {
+      role: 'user',
+      type: 'text',
+      content: message.trim()
+    };
+    
+    // Debug logging
+    console.log('Submitting message:', messageObject);
+    
+    onSubmit(messageObject);
     setMessage('');
   };
 
@@ -22,12 +32,12 @@ export default function ChatInput({ onSendMessage, disabled }) {
       const imageUrl = URL.createObjectURL(file);
       
       // Show image preview
-      onSendMessage({
+      onSubmit({
         role: 'user',
         type: 'image',
         imageUrl,
         content: 'Analyzing bet slip...'
-      });
+      }, 'image');
 
       // 1. Extract text using Tesseract
       const extractedText = await extractText(file);
@@ -108,7 +118,7 @@ Text: ${extractedText}`
           }
         };
 
-        onSendMessage(betSlipData);
+        onSubmit(betSlipData, 'betslip');
       }
     } catch (error) {
       console.error('Error processing image:', error);
@@ -129,39 +139,33 @@ Text: ${extractedText}`
   }
 
   return (
-    <div className="relative">
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 max-w-4xl mx-auto">
-        <ImageUpload 
-          onUpload={handleImageUpload}
-          disabled={disabled || processing}
-          className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-full transition-colors border border-gray-700"
-          icon={<FaCamera className="w-4 h-4 text-gray-400" />}
-        />
-        <input
-          type="text"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder={processing ? "Processing..." : "Type a message..."}
-          disabled={disabled || processing}
-          className="flex-1 py-2.5 px-4 text-[16px] bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 text-white"
-        />
-        {message.trim() && (
-          <button
-            type="submit"
-            disabled={disabled || processing}
-            className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <svg 
-              className="w-5 h-5 text-white transform rotate-90" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
-      </form>
-    </div>
+    <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+      <ImageUpload 
+        onUpload={handleImageUpload}
+        disabled={isLoading || processing}
+        className="p-2 text-gray-400 hover:text-gray-300 transition-colors"
+      >
+        <FaCamera className="w-5 h-5" />
+      </ImageUpload>
+      <input
+        type="text"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        placeholder={processing ? "Processing image..." : "Send a message"}
+        disabled={isLoading || processing}
+        className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      {message.trim() && (
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="p-2 text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50"
+        >
+          <svg className="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </button>
+      )}
+    </form>
   );
 }

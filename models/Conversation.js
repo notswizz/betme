@@ -1,13 +1,19 @@
 import mongoose from 'mongoose';
 
-const MessageSchema = new mongoose.Schema({
+const messageSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
     enum: ['user', 'assistant']
   },
-  content: {
+  type: {
     type: String,
+    required: false,
+    default: 'text',
+    enum: ['text', 'betslip', 'open_bets', 'image']
+  },
+  content: {
+    type: mongoose.Schema.Types.Mixed,
     required: true
   },
   timestamp: {
@@ -16,13 +22,13 @@ const MessageSchema = new mongoose.Schema({
   }
 });
 
-const ConversationSchema = new mongoose.Schema({
+const conversationSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  messages: [MessageSchema],
+  messages: [messageSchema],
   active: {
     type: Boolean,
     default: true
@@ -37,4 +43,4 @@ const ConversationSchema = new mongoose.Schema({
   }
 });
 
-export default mongoose.models.Conversation || mongoose.model('Conversation', ConversationSchema); 
+export default mongoose.models.Conversation || mongoose.model('Conversation', conversationSchema); 

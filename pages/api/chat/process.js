@@ -8,12 +8,18 @@ import { handleNormalChat } from '@/pages/api/actions/chat';
 import { checkBalance } from '@/pages/api/actions/balance';
 import { getListings } from '@/pages/api/actions/listing';
 import User from '@/models/User';
+import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
+
+  // Debug logging
+  console.log('Request body:', req.body);
+  console.log('Message type:', typeof req.body.message);
+  console.log('Message content:', req.body.message);
 
   // Get auth header
   const authHeader = req.headers.authorization;
@@ -37,9 +43,22 @@ export default async function handler(req, res) {
 
     const { message, conversationId, confirmAction, type } = req.body;
 
-    // Validate input
-    if (!confirmAction && (!message || typeof message !== 'string')) {
-      return res.status(400).json({ error: 'Invalid message format' });
+    // More detailed validation with error messages
+    if (!confirmAction) {
+      if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+      }
+      if (typeof message === 'object') {
+        if (!message.content) {
+          return res.status(400).json({ error: 'Message content is required' });
+        }
+        if (!message.type) {
+          return res.status(400).json({ error: 'Message type is required' });
+        }
+        if (!message.role) {
+          return res.status(400).json({ error: 'Message role is required' });
+        }
+      }
     }
 
     // Find user
@@ -119,7 +138,7 @@ export default async function handler(req, res) {
       ? await Conversation.findById(conversationId)
       : new Conversation({ 
           messages: [],
-          userId: userId  // Add the required userId field
+          userId: userId
         });
 
     // Add user message to conversation
@@ -131,63 +150,193 @@ export default async function handler(req, res) {
     
     conversation.messages.push(userMessage);
 
-    // Get AI response
-    const aiResponse = await generateAIResponse([
-      ...conversation.messages
-    ]);
+    // Analyze conversation intent
+    const analysis = await analyzeConversation([...conversation.messages]);
+    console.log('Conversation analysis:', analysis); // Add debug logging
 
-    // Check if the response contains a bet slip
-    let betSlip = null;
-    try {
-      const content = aiResponse.content;
-      // Try to parse JSON from the response
-      if (typeof content === 'string' && (content.includes('"type":') || content.includes('"sport":'))) {
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          betSlip = JSON.parse(jsonMatch[0]);
-        }
+    // Handle direct responses
+    if (analysis.type === 'direct') {
+      let result;
+      
+      switch (analysis.action) {
+        case 'view_open_bets':
+          result = await getOpenBets(userId);
+          break;
+        case 'view_bets':
+          result = await getUserBets(userId);
+          break;
+        case 'balance_check':
+          result = {
+            success: true,
+            message: {
+              role: 'assistant',
+              type: 'text',
+              content: `Your current balance is ${user.tokenBalance} tokens.`
+            }
+          };
+          break;
+        default:
+          result = {
+            success: false,
+            error: 'Unknown direct action'
+          };
       }
-    } catch (error) {
-      console.error('Error parsing bet slip:', error);
-    }
 
-    // If we detected a bet slip, format it for the UI
-    if (betSlip && betSlip.type && betSlip.sport) {
-      const betSlipContent = {
-        type: betSlip.type,
-        sport: betSlip.sport,
-        team1: betSlip.team1,
-        team2: betSlip.team2,
-        line: betSlip.line || '',
-        odds: betSlip.odds || '-110',
-        stake: betSlip.stake || '10',
-        pick: betSlip.pick,
-        payout: calculatePayout(parseFloat(betSlip.stake) || 10, betSlip.odds || '-110').toFixed(2)
-      };
+      if (!result.success) {
+        return res.status(500).json({ error: result.error });
+      }
 
-      const formattedResponse = {
-        role: 'assistant',
-        type: 'betslip',
-        content: JSON.stringify(betSlipContent) // Stringify for conversation storage
-      };
-
-      conversation.messages.push(formattedResponse);
+      conversation.messages.push(result.message);
       await conversation.save();
 
       return res.status(200).json({
-        message: {
-          ...formattedResponse,
-          content: betSlipContent // Send the object for UI rendering
-        },
+        message: result.message,
         conversationId: conversation._id.toString()
       });
     }
 
-    // Handle regular chat response
+    // Get AI response for non-direct actions
+    const aiResponse = await generateAIResponse([
+      ...conversation.messages
+    ]);
+
+    // Extract JSON from response if it exists
+    let jsonResponse = null;
+    let conversationalResponse = '';
+    
+    try {
+      const content = aiResponse.content;
+      // Find JSON object in the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonResponse = JSON.parse(jsonMatch[0]);
+        // Get the conversational part (everything before the JSON)
+        conversationalResponse = content.substring(0, jsonMatch.index).trim();
+      } else {
+        conversationalResponse = content;
+      }
+    } catch (error) {
+      console.error('Error parsing AI response:', error);
+      conversationalResponse = aiResponse.content;
+    }
+
+    // If we have a valid intent, handle it
+    if (jsonResponse && jsonResponse.intent) {
+      let result;
+      
+      switch (jsonResponse.intent) {
+        case 'view_open_bets':
+          result = await getOpenBets(userId);
+          if (result.success) {
+            return res.status(200).json({
+              message: result.message,
+              conversationId: conversation._id.toString()
+            });
+          }
+          break;
+        case 'view_bets':
+          result = await getUserBets(userId);
+          if (result.success) {
+            return res.status(200).json({
+              message: result.message,
+              conversationId: conversation._id.toString()
+            });
+          }
+          break;
+        case 'check_balance':
+          result = {
+            success: true,
+            message: {
+              role: 'assistant',
+              type: 'text',
+              content: `Your current balance is ${user.tokenBalance} tokens.`
+            }
+          };
+          break;
+      }
+
+      if (result && result.success) {
+        // Only add conversational response for non-bet viewing intents
+        if (conversationalResponse && jsonResponse.intent !== 'view_open_bets' && jsonResponse.intent !== 'view_bets') {
+          conversation.messages.push({
+            role: 'assistant',
+            type: 'text',
+            content: conversationalResponse
+          });
+        }
+        
+        // Then add the actual data response
+        conversation.messages.push(result.message);
+        await conversation.save();
+
+        return res.status(200).json({
+          messages: [
+            ...(conversationalResponse && jsonResponse.intent !== 'view_open_bets' && jsonResponse.intent !== 'view_bets' ? [{
+              role: 'assistant',
+              type: 'text',
+              content: conversationalResponse
+            }] : []),
+            result.message
+          ],
+          conversationId: conversation._id.toString()
+        });
+      }
+    }
+
+    // Handle betting intents
+    if (jsonResponse && jsonResponse.type && jsonResponse.sport) {
+      const betSlipContent = {
+        type: jsonResponse.type,
+        sport: jsonResponse.sport,
+        team1: jsonResponse.team1,
+        team2: jsonResponse.team2,
+        line: jsonResponse.line || '',
+        odds: jsonResponse.odds || '-110',
+        stake: jsonResponse.stake || '10',
+        pick: jsonResponse.pick,
+        payout: calculatePayout(parseFloat(jsonResponse.stake) || 10, jsonResponse.odds || '-110').toFixed(2)
+      };
+
+      // Add conversational response
+      if (conversationalResponse) {
+        conversation.messages.push({
+          role: 'assistant',
+          type: 'text',
+          content: conversationalResponse
+        });
+      }
+
+      // Add bet slip
+      const betSlipMessage = {
+        role: 'assistant',
+        type: 'betslip',
+        content: JSON.stringify(betSlipContent)
+      };
+      
+      conversation.messages.push(betSlipMessage);
+      await conversation.save();
+
+      return res.status(200).json({
+        messages: [
+          ...(conversationalResponse ? [{
+            role: 'assistant',
+            type: 'text',
+            content: conversationalResponse
+          }] : []),
+          {
+            ...betSlipMessage,
+            content: betSlipContent // Send as object for UI
+          }
+        ],
+        conversationId: conversation._id.toString()
+      });
+    }
+
+    // Default to regular chat response
     const regularResponse = {
       role: 'assistant',
-      content: aiResponse.content,
-      type: 'text'
+      type: 'text',
+      content: conversationalResponse || "I'm not sure how to help with that. Would you like to place a bet, view open bets, or check your balance?"
     };
 
     conversation.messages.push(regularResponse);
@@ -213,4 +362,59 @@ function calculatePayout(stake, odds) {
     return stake + (stake * 100) / Math.abs(numOdds);
   }
   return stake;
+}
+
+// Add this function near the top with other handlers
+async function getOpenBets(userId) {
+  try {
+    const openBets = await Bet.find({
+      userId: { $ne: userId },
+      status: 'pending'
+    })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+
+    return {
+      success: true,
+      message: {
+        role: 'assistant',
+        type: 'open_bets',
+        content: JSON.stringify(openBets) // Stringify the content
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching open bets:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch open bets'
+    };
+  }
+}
+
+// Add this function near the top with other handlers
+async function getUserBets(userId) {
+  try {
+    const userBets = await Bet.find({
+      userId: userId
+    })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .lean();
+
+    return {
+      success: true,
+      message: {
+        role: 'assistant',
+        type: 'open_bets',
+        content: JSON.stringify(userBets) // Stringify the content
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching user bets:', error);
+    return {
+      success: false,
+      error: 'Failed to fetch your bets'
+    };
+  }
 } 
