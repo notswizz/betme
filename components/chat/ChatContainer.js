@@ -231,14 +231,14 @@ export default function ChatContainer() {
       )}
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col h-full">
+      <div className="flex-1 flex flex-col h-[100dvh] md:h-full">
         {/* Messages Section */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 snap-y snap-mandatory">
+        <div className="flex-1 overflow-y-auto p-4 pt-16 md:pt-8 space-y-4">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col">
-              <div className="w-full mt-12">
+              <div className="w-full mt-4">
                 <Scoreboard />
-                <div className="mt-12 grid grid-cols-2 gap-3 max-w-2xl mx-auto px-4">
+                <div className="mt-8 grid grid-cols-2 gap-3 max-w-2xl mx-auto px-4">
                   <button
                     onClick={() => handleSendMessage("I want to place a bet")}
                     className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
@@ -297,7 +297,7 @@ export default function ChatContainer() {
         </div>
 
         {/* Input Section */}
-        <div className="p-4 bg-gray-900/50 border-t border-gray-800">
+        <div className="sticky bottom-0 left-0 right-0 p-4 bg-gray-900/80 backdrop-blur-lg border-t border-gray-800">
           <ChatInput 
             onSendMessage={handleSendMessage}
             disabled={loading}

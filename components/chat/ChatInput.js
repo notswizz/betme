@@ -129,55 +129,36 @@ Text: ${extractedText}`
   }
 
   return (
-    <div className="border-t p-2 bg-gradient-to-b from-white to-gray-50 shadow-inner">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2 max-w-4xl mx-auto">
-        <div className="flex items-center gap-2">
-          <ImageUpload 
-            onUpload={handleImageUpload}
-            disabled={disabled || processing}
-            className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
-            icon={<FaCamera className="w-4 h-4 text-gray-600" />}
-          />
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={processing ? "Processing..." : "Type a message..."}
-            disabled={disabled || processing}
-            className="flex-1 p-2.5 text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400 text-gray-600 shadow-sm"
-          />
-        </div>
-        
+    <div className="relative">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2 max-w-4xl mx-auto">
+        <ImageUpload 
+          onUpload={handleImageUpload}
+          disabled={disabled || processing}
+          className="flex-shrink-0 w-10 h-10 flex items-center justify-center bg-gray-800 hover:bg-gray-700 rounded-full transition-colors border border-gray-700"
+          icon={<FaCamera className="w-4 h-4 text-gray-400" />}
+        />
+        <input
+          type="text"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder={processing ? "Processing..." : "Type a message..."}
+          disabled={disabled || processing}
+          className="flex-1 py-2.5 px-4 text-[16px] bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 text-white"
+        />
         {message.trim() && (
           <button
             type="submit"
             disabled={disabled || processing}
-            className={`w-full p-2.5 rounded-xl font-medium relative group overflow-hidden ${
-              disabled || processing
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'hover:scale-[1.02] active:scale-95'
-            } text-white transition-all duration-200 shadow-md hover:shadow-lg text-base`}
+            className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {/* Animated gradient background */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-90"></div>
-            
-            {/* Pulsing effect */}
-            <div className="absolute inset-0 bg-white/20 scale-x-0 animate-pulse group-hover:scale-x-100 transition-transform duration-700 ease-in-out"></div>
-            
-            {/* Button content */}
-            <div className="relative flex items-center justify-center gap-2">
-              <span>Send</span>
-              <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                <svg 
-                  className="w-3 h-3 text-white transform rotate-90 group-hover:translate-y-0.5 transition-transform duration-200" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
+            <svg 
+              className="w-5 h-5 text-white transform rotate-90" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
           </button>
         )}
       </form>
