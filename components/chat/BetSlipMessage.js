@@ -14,6 +14,16 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
 
+  // Add effect to handle Moneyline bet type
+  useEffect(() => {
+    if (betSlip.type === 'Moneyline') {
+      setBetSlip(prev => ({
+        ...prev,
+        line: 'ML'
+      }));
+    }
+  }, [betSlip.type]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -147,7 +157,10 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
               type="text"
               value={betSlip.line}
               onChange={(e) => setBetSlip({...betSlip, line: e.target.value})}
-              className="block w-full rounded-lg bg-gray-800 border-gray-600 text-white p-2 text-sm md:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              disabled={betSlip.type === 'Moneyline'}
+              className={`block w-full rounded-lg bg-gray-800 border-gray-600 text-white p-2 text-sm md:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
+                betSlip.type === 'Moneyline' ? 'cursor-not-allowed opacity-75' : ''
+              }`}
             />
           </div>
           <div>

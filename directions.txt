@@ -1,0 +1,180 @@
+# BetChat Application Architecture and Flow
+
+## Overview
+BetChat is an AI-powered sports betting assistant that allows users to place bets through a chat interface. The application uses a sophisticated message processing system to understand user intent and handle various actions including betting, balance checks, and listings.
+
+## Core Flow
+
+### 1. Message Processing Pipeline
+Primary files:
+- `pages/api/chat/process.js`: Central message processing hub
+- `utils/convoAnalyze.js`: Message analysis and action handling
+- `utils/venice.js`: AI integration for message understanding
+- `utils/tesseract.js`: OCR for bet slip processing
+
+Message flow:
+1. User sends message through `ChatContainer.js`
+2. Message is sent to `/api/chat/process` endpoint with JWT token
+3. Process.js:
+   - Verifies authentication
+   - Checks token balance
+   - Manages conversation history
+   - Routes message to appropriate handler
+
+### 2. Message Types and Handling
+
+#### Regular Messages
+Flow:
+1. Message received by process.js
+2. Sent to `analyzeConversation` in convoAnalyze.js
+3. Intent is analyzed, returns one of:
+   - `direct`: Immediate responses (balance, listings)
+   - `action`: Needs confirmation (bets, tokens)
+   - `chat`: Normal chat message
+4. Response is generated and returned to UI
+
+#### Action Confirmation
+Flow:
+1. User confirms action in UI
+2. Confirmation sent to process.js
+3. `handleAction` in convoAnalyze.js processes it
+4. Action is executed (place bet, add tokens, etc.)
+5. Confirmation message returned to UI
+
+#### Image Processing
+Flow:
+1. User uploads bet slip image
+2. `tesseract.js` extracts text
+3. Text analyzed by AI through venice.js
+4. Structured bet data created
+5. Bet slip form displayed for confirmation
+
+### 3. Betting System
+Files involved:
+- `utils/betSubmission.js`: Bet submission logic
+- `models/Bet.js`: Bet data schema
+- `pages/api/bets/create.js`: Bet creation endpoint
+
+Betting flow:
+1. User initiates bet (through chat or image)
+2. AI analyzes request via venice.js
+3. Bet details structured and validated
+4. User confirms bet details
+5. Bet submitted to database
+6. Token balance updated
+7. Confirmation displayed
+
+### 4. Database Integration
+Models:
+- `models/User.js`: User data and token balance
+- `models/Bet.js`: Bet records
+- `models/Conversation.js`: Chat history
+- `utils/mongodb.js`: Database connection
+
+Database operations:
+1. Conversation tracking
+2. Bet recording
+3. Balance management
+4. User data storage
+
+### 5. Frontend Components
+
+#### Chat Interface
+- `ChatContainer.js`: Main container, manages message state
+- `ChatMessage.js`: Message rendering
+- `ChatInput.js`: Message input and image uploads
+- `BetSlipMessage.js`: Bet form display
+
+#### Authentication
+- `LoginForm.js`: Login handling
+- `SignupForm.js`: Registration
+- `auth.js`: Auth utilities
+
+#### Token Management
+- `TokenBalance.js`: Balance display
+- Balance API endpoints
+
+## Technical Details
+
+### Authentication Flow
+1. User logs in/signs up
+2. JWT token issued
+3. Token stored in localStorage
+4. Token included in all API requests
+5. Server validates token for each request
+
+### API Structure
+1. Chat Processing:
+   ```
+   /api/chat/process
+   - Handles all message types
+   - Routes to appropriate handlers
+   - Manages conversation state
+   ```
+
+2. Actions:
+   ```
+   /api/bets/create
+   /api/actions/balance
+   /api/actions/listing
+   - Handle specific actions
+   - Require authentication
+   - Return structured responses
+   ```
+
+### Error Handling
+1. Authentication:
+   - Token validation
+   - Session management
+   - Access control
+
+2. Action Processing:
+   - Input validation
+   - Balance checks
+   - Data validation
+
+3. Message Processing:
+   - AI processing errors
+   - Invalid actions
+   - Rate limiting
+
+### Environment Requirements
+Required variables:
+- MONGODB_URI: Database connection
+- JWT_SECRET: Authentication
+- AI_API_KEY: Venice AI integration
+
+## Development Notes
+
+### State Management
+1. Server State:
+   - MongoDB for persistence
+   - Conversation tracking
+   - User data
+
+2. Client State:
+   - React state for UI
+   - localStorage for auth
+   - Real-time updates
+
+### Security
+1. Authentication:
+   - JWT validation
+   - Token expiration
+   - Secure storage
+
+2. Data Validation:
+   - Input sanitization
+   - Schema validation
+   - Type checking
+
+### Error Recovery
+1. Token Issues:
+   - Auto refresh
+   - Re-authentication
+   - Clear invalid tokens
+
+2. Action Failures:
+   - Retry logic
+   - Error messages
+   - State recovery 
