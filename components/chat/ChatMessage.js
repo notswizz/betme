@@ -1,10 +1,13 @@
-import OpenBetsView from '../messages/OpenBetsView';
-import BetSuccessMessage from '../messages/BetSuccessMessage';
-import ImagePreview from '../messages/ImagePreview';
-import BetConfirmation from '../messages/BetConfirmation';
+import React from 'react';
+import MessageAvatar from '../messages/MessageAvatar';
 import RegularMessage from '../messages/RegularMessage';
+import BetConfirmation from '../messages/BetConfirmation';
+import BetSuccessMessage from '../messages/BetSuccessMessage';
+import OpenBetsView from '../messages/OpenBetsView';
+import ImagePreview from '../messages/ImagePreview';
+import PlayerStatsCard from '../messages/PlayerStatsCard';
+import { memo } from 'react';
 import { BetSlipMessage } from './BetSlipMessage';
-import { memo, useMemo } from 'react';
 
 // Memoize the BetSlipMessage wrapper to prevent unnecessary re-renders
 const MemoizedBetSlipWrapper = memo(function BetSlipWrapper({ data, onSubmit }) {
@@ -18,150 +21,47 @@ const MemoizedBetSlipWrapper = memo(function BetSlipWrapper({ data, onSubmit }) 
   );
 });
 
-export default function ChatMessage({ message, onConfirmAction, onCancelAction }) {
-  const isUser = message.role === 'user';
+const ChatMessage = ({ message, onBetConfirm, onImageUpload }) => {
+  const { role, type, content } = message;
+  const isUser = role === 'user';
 
-  // Memoize the message content parsing
-  const parsedContent = useMemo(() => {
-    if (message.type === 'text' && typeof message.content === 'string') {
-      try {
-        return JSON.parse(message.content);
-      } catch (e) {
-        return null;
-      }
+  const renderMessageContent = () => {
+    // Handle player stats content specially
+    if (content && typeof content === 'object' && 'firstName' in content) {
+      return <PlayerStatsCard stats={content} />;
     }
-    return message.content;
-  }, [message.type, message.content]);
 
-  // Handle confirmation message
-  if (message.type === 'text' && message.requiresConfirmation === true && message.action) {
-    console.log('Rendering confirmation message:', message);
-    return (
-      <BetConfirmation 
-        message={message}
-        onConfirm={onConfirmAction}
-        onCancel={onCancelAction}
-      />
-    );
-  }
+    switch (type) {
+      case 'text':
+        return <RegularMessage content={content} message={message} />;
+      case 'bet_confirmation':
+        return <BetConfirmation bet={content} onConfirm={onBetConfirm} />;
+      case 'bet_success':
+        return <BetSuccessMessage bet={content} />;
+      case 'open_bets':
+        return <OpenBetsView bets={content} />;
+      case 'image':
+        return <ImagePreview image={content} onUpload={onImageUpload} />;
+      case 'betslip':
+        return handleBetSlip(content);
+      default:
+        return <RegularMessage content={content} message={message} />;
+    }
+  };
 
-  // Handle bet slip form
-  if (message.type === 'betslip') {
-    const betSlipData = typeof message.content === 'string' ? 
-      JSON.parse(message.content) : 
-      message.content;
-
-    // Calculate payout based on stake and odds
-    const calculatePayout = (stake, odds) => {
-      const numStake = parseFloat(stake);
-      const numOdds = parseInt(odds.replace(/[^-\d]/g, ''));
-      
-      if (isNaN(numStake) || isNaN(numOdds)) return 19.52;
-      
-      if (numOdds > 0) {
-        return (numStake + (numStake * numOdds) / 100).toFixed(2);
-      } else if (numOdds < 0) {
-        return (numStake + (numStake * 100) / Math.abs(numOdds)).toFixed(2);
-      }
-      return numStake.toFixed(2);
-    };
-
-    // Create a properly formatted bet slip data object
-    const formattedBetSlipData = {
-      type: betSlipData.type || 'Spread',
-      sport: betSlipData.sport || 'NFL',
-      team1: betSlipData.team1 || '',
-      team2: betSlipData.team2 || '',
-      line: betSlipData.type === 'Moneyline' ? 'ML' : (betSlipData.line || ''),
-      odds: betSlipData.odds?.toString() || '-110',
-      pick: betSlipData.pick || betSlipData.team1 || '',
-      stake: parseFloat(betSlipData.stake || '10'),
-      payout: parseFloat(betSlipData.payout || calculatePayout(betSlipData.stake || '10', betSlipData.odds || '-110'))
-    };
-
-    console.log('Formatted bet slip data:', formattedBetSlipData);
-
-    // Create a stable key for the wrapper
-    const wrapperKey = `${formattedBetSlipData.team1}-${formattedBetSlipData.team2}-${formattedBetSlipData.type}-${formattedBetSlipData.odds}`;
-    
-    return (
-      <MemoizedBetSlipWrapper 
-        key={wrapperKey}
-        data={formattedBetSlipData}
-        onSubmit={(confirmationMessage) => {
-          console.log('Submitting bet with data:', formattedBetSlipData);
-          const confirmMessage = {
-            role: 'assistant',
-            type: 'text',
-            requiresConfirmation: true,
-            content: `Would you like to place this bet?\n` +
-                    `${formattedBetSlipData.team1} vs ${formattedBetSlipData.team2}\n` +
-                    `${formattedBetSlipData.type} bet @ ${formattedBetSlipData.odds}\n` +
-                    `Line: ${formattedBetSlipData.line}\n` +
-                    `Stake: $${formattedBetSlipData.stake}\n` +
-                    `Potential Payout: $${formattedBetSlipData.payout}`,
-            action: {
-              name: 'place_bet',
-              ...formattedBetSlipData,
-              line: formattedBetSlipData.type === 'Moneyline' ? 'ML' : formattedBetSlipData.line,
-              status: 'pending'
-            }
-          };
-          onConfirmAction(confirmMessage);
-        }}
-      />
-    );
-  }
-
-  // Handle bet success message
-  if (message.type === 'text' && parsedContent?.type === 'bet_success') {
-    return <BetSuccessMessage betData={parsedContent.data} />;
-  }
-
-  // Handle image preview
-  if (message.type === 'image') {
-    return <ImagePreview message={message} />;
-  }
-
-  // Handle open bets display
-  if (message.type === 'open_bets') {
-    return (
-      <div className="w-full mb-4">
-        <div className="flex justify-start items-start space-x-3">
-          <div className="relative w-9 h-9 rounded-xl shadow-lg group">
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-90"></div>
-            <div className="absolute inset-[1px] rounded-xl bg-gray-900 flex items-center justify-center">
-              <div className="relative flex items-center justify-center">
-                <div className="absolute w-7 h-7 bg-blue-500/20 rounded-xl animate-ping"></div>
-                <span className="relative text-sm font-medium bg-gradient-to-r from-blue-400 to-blue-300 text-transparent bg-clip-text">AI</span>
-              </div>
-            </div>
-          </div>
-          <div className="flex-1">
-            <OpenBetsView 
-              bets={message.content} 
-              onPlaceSimilar={(bet) => {
-                onConfirmAction({
-                  name: 'place_bet',
-                  type: bet.type,
-                  sport: bet.sport,
-                  team1: bet.team1,
-                  team2: bet.team2,
-                  line: bet.line,
-                  odds: bet.odds,
-                  stake: bet.stake
-                });
-              }}
-            />
-          </div>
+  return (
+    <div className="w-full mb-4">
+      <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
+        <div className={`flex max-w-[85%] items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+          <MessageAvatar isUser={isUser} />
+          {renderMessageContent()}
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+};
 
-  // Regular message display
-  return <RegularMessage message={message} />;
-}
+export default ChatMessage;
 
 // Helper functions
 export function parseBetSlipData(content) {

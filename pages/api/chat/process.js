@@ -65,7 +65,7 @@ function handleVeniceResponse(response) {
       return {
         message: {
           role: 'assistant',
-          type: 'basketball_stats',
+          type: 'player_stats',
           content: {
             query: {
               type: jsonData.type,
@@ -153,7 +153,7 @@ function handleVeniceResponse(response) {
 
 // Constants for validation
 const VALID_INTENTS = ['basketball_query', 'place_bet', 'view_bets', 'view_open_bets', 'chat'];
-const VALID_MESSAGE_TYPES = ['text', 'basketball_stats', 'betslip', 'open_bets'];
+const VALID_MESSAGE_TYPES = ['text', 'player_stats', 'betslip', 'open_bets', 'image', 'bet_success'];
 
 // Helper functions for validation
 function isValidIntentFormat(data) {

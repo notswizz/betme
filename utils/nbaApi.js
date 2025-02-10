@@ -6,9 +6,19 @@ const cache = new Map();
 const RATE_LIMIT = {
   MAX_REQUESTS_PER_MINUTE: 30,
   REQUESTS: [],
-  CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
-  REQUEST_TIMEOUT: 10000 // 10 seconds
+  CACHE_DURATION: 60 * 60 * 1000, // Increase to 60 minutes
+  REQUEST_TIMEOUT: 10000,
+  PLAYER_CACHE_DURATION: 24 * 60 * 60 * 1000, // 24 hours for player data
+  TEAM_CACHE_DURATION: 24 * 60 * 60 * 1000,   // 24 hours for team data
+  STATS_CACHE_DURATION: 60 * 60 * 1000,       // 60 minutes for stats
+  BATCH_SIZE: 5,                              // Process 5 requests at a time
+  BATCH_INTERVAL: 2000                        // 2 second delay between batches
 };
+
+// Add global player cache
+const playerCache = new Map();
+const teamCache = new Map();
+const statsCache = new Map();
 
 // Team ID cache
 let NBA_TEAMS = null;
@@ -166,13 +176,24 @@ const STAR_PLAYERS = {
   'kevin durant': 24, // Suns
 };
 
+// Enhanced fetchFromAPI with better batching and backoff
 async function fetchFromAPI(endpoint, params = {}) {
   const queryString = new URLSearchParams(params).toString();
   const cacheKey = `${endpoint}?${queryString}`;
   
-  // Check cache first
+  // Determine cache duration based on endpoint type
+  let cacheDuration = RATE_LIMIT.CACHE_DURATION;
+  if (endpoint.includes('players') && !endpoint.includes('statistics')) {
+    cacheDuration = RATE_LIMIT.PLAYER_CACHE_DURATION;
+  } else if (endpoint.includes('teams')) {
+    cacheDuration = RATE_LIMIT.TEAM_CACHE_DURATION;
+  } else if (endpoint.includes('statistics')) {
+    cacheDuration = RATE_LIMIT.STATS_CACHE_DURATION;
+  }
+
+  // Check cache first with longer durations
   const cachedData = cache.get(cacheKey);
-  if (cachedData && Date.now() - cachedData.timestamp < RATE_LIMIT.CACHE_DURATION) {
+  if (cachedData && Date.now() - cachedData.timestamp < cacheDuration) {
     console.log('Using cached data for:', cacheKey);
     return cachedData.data;
   }
@@ -180,23 +201,37 @@ async function fetchFromAPI(endpoint, params = {}) {
   // Clean up old requests
   const now = Date.now();
   RATE_LIMIT.REQUESTS = RATE_LIMIT.REQUESTS.filter(time => 
-    now - time < 60000 // Keep only requests from last minute
+    now - time < 60000
   );
 
-  // Check if we're over the rate limit
+  // If we're over the rate limit, wait for the next batch window
   if (RATE_LIMIT.REQUESTS.length >= RATE_LIMIT.MAX_REQUESTS_PER_MINUTE) {
     const oldestRequest = RATE_LIMIT.REQUESTS[0];
     const timeToWait = 60000 - (now - oldestRequest);
-    console.log(`Rate limit reached. Waiting ${timeToWait}ms before next request`);
-    await new Promise(resolve => setTimeout(resolve, timeToWait));
-    return fetchFromAPI(endpoint, params); // Retry after waiting
+    console.log(`Rate limit reached. Waiting ${Math.ceil(timeToWait/1000)}s before next request`);
+    
+    // Return cached data if available, even if expired
+    if (cachedData) {
+      console.log('Using expired cache while waiting for rate limit');
+      return cachedData.data;
+    }
+    
+    // Implement exponential backoff
+    const backoffTime = Math.min(timeToWait, 60000); // Cap at 60 seconds
+    await new Promise(resolve => setTimeout(resolve, backoffTime));
+    return fetchFromAPI(endpoint, params);
   }
 
   // Add this request to the tracking array
   RATE_LIMIT.REQUESTS.push(now);
 
+  // If we have a batch in progress, wait for the next interval
+  const currentBatchSize = RATE_LIMIT.REQUESTS.filter(time => now - time < RATE_LIMIT.BATCH_INTERVAL).length;
+  if (currentBatchSize >= RATE_LIMIT.BATCH_SIZE) {
+    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT.BATCH_INTERVAL));
+  }
+
   try {
-    // Make the request with timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), RATE_LIMIT.REQUEST_TIMEOUT);
 
@@ -211,12 +246,19 @@ async function fetchFromAPI(endpoint, params = {}) {
 
     clearTimeout(timeoutId);
 
-    // Handle rate limiting response
+    // Handle rate limiting with smarter backoff
     if (response.status === 429) {
-      const retryAfter = response.headers.get('Retry-After') || 60;
+      const retryAfter = parseInt(response.headers.get('Retry-After') || '60');
       console.log(`Rate limited. Waiting ${retryAfter}s before retry`);
+      
+      // Return cached data if available, even if expired
+      if (cachedData) {
+        console.log('Using expired cache during rate limit');
+        return cachedData.data;
+      }
+      
       await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-      return fetchFromAPI(endpoint, params); // Retry after waiting
+      return fetchFromAPI(endpoint, params);
     }
 
     if (!response.ok) {
@@ -235,18 +277,30 @@ async function fetchFromAPI(endpoint, params = {}) {
   } catch (error) {
     if (error.name === 'AbortError') {
       console.error('Request timeout:', endpoint);
+      // Return cached data if available, even if expired
+      if (cachedData) {
+        console.log('Using expired cache after timeout');
+        return cachedData.data;
+      }
       throw new Error('Request timeout');
     }
     throw error;
   }
 }
 
-// Get player by name - uses multiple API calls for complete data
+// Enhanced findPlayerByName with caching
 export async function findPlayerByName(name) {
   try {
     console.log('Searching for player:', name);
     const searchName = name.toLowerCase();
     
+    // Check player cache first
+    const cachedPlayer = playerCache.get(searchName);
+    if (cachedPlayer && Date.now() - cachedPlayer.timestamp < RATE_LIMIT.PLAYER_CACHE_DURATION) {
+      console.log('Using cached player data for:', searchName);
+      return cachedPlayer.data;
+    }
+
     // Step 1: Search for player by name
     const searchResponse = await fetchFromAPI(NBA_ENDPOINTS.PLAYERS.SEARCH, {
       search: searchName
@@ -273,7 +327,15 @@ export async function findPlayerByName(name) {
     const teamInfo = await getTeamInfo(player.team?.id);
 
     // Step 5: Combine all data
-    return formatPlayerData(player, playerInfo, teamInfo);
+    const formattedPlayer = formatPlayerData(player, playerInfo, teamInfo);
+
+    // Cache the result
+    playerCache.set(searchName, {
+      timestamp: Date.now(),
+      data: formattedPlayer
+    });
+
+    return formattedPlayer;
   } catch (error) {
     console.error('Error in player search pipeline:', error);
     return null;
@@ -378,38 +440,52 @@ function formatPlayerData(player, playerInfo, teamInfo) {
   };
 }
 
-// Get player stats with complete pipeline
+// Enhanced getPlayerStats with better caching
 export async function getPlayerStats(playerId) {
   try {
     console.log('Getting stats for player:', playerId);
     
-    // If we got a query object, extract the player ID
+    // Generate cache key
+    const cacheKey = typeof playerId === 'object' 
+      ? `stats_${playerId.player}_${playerId.stat || 'all'}_${getCurrentSeason()}`
+      : `stats_${playerId}_all_${getCurrentSeason()}`;
+
+    // Check stats cache first
+    const cachedStats = statsCache.get(cacheKey);
+    if (cachedStats && Date.now() - cachedStats.timestamp < RATE_LIMIT.STATS_CACHE_DURATION) {
+      console.log('Using cached stats for:', cacheKey);
+      return cachedStats.data;
+    }
+
+    // Get player info and stats
+    let playerInfo;
     let playerIdToUse;
     let requestedStat;
     
     if (typeof playerId === 'object') {
-      playerName = playerId.player;
+      const playerName = playerId.player;
       requestedStat = playerId.stat;
       // First find the player to get their ID
-      const player = await findPlayerByName(playerName);
-      if (!player) {
+      playerInfo = await findPlayerByName(playerName);
+      if (!playerInfo) {
         return {
           role: 'assistant',
           type: 'text',
           content: `I couldn't find a player named "${playerName}". Please check the spelling and try again.`
         };
       }
-      playerIdToUse = player.id;
+      playerIdToUse = playerInfo.id;
     } else {
       playerIdToUse = playerId;
-    }
-
-    // Use the cache if available
-    const cacheKey = `player_stats_${playerIdToUse}_${getCurrentSeason()}`;
-    const cachedStats = cache.get(cacheKey);
-    if (cachedStats && Date.now() - cachedStats.timestamp < RATE_LIMIT.CACHE_DURATION) {
-      console.log('Using cached stats for player:', playerIdToUse);
-      return cachedStats.data;
+      // If we only have ID, get player info
+      const searchResponse = await fetchFromAPI(NBA_ENDPOINTS.PLAYERS.INFO, {
+        id: playerIdToUse
+      });
+      if (searchResponse.response && searchResponse.response.length > 0) {
+        const player = searchResponse.response[0];
+        const teamInfo = await getTeamInfo(player.team?.id);
+        playerInfo = formatPlayerData(player, null, teamInfo);
+      }
     }
 
     const response = await fetchFromAPI('players/statistics', {
@@ -450,10 +526,15 @@ export async function getPlayerStats(playerId) {
       fgm: acc.fgm + (game.fgm || 0),
       fga: acc.fga + (game.fga || 0),
       tpm: acc.tpm + (game.tpm || 0),
-      tpa: acc.tpa + (game.tpa || 0)
+      tpa: acc.tpa + (game.tpa || 0),
+      ftm: acc.ftm + (game.ftm || 0),
+      fta: acc.fta + (game.fta || 0),
+      turnovers: acc.turnovers + (game.turnovers || 0),
+      fouls: acc.fouls + (game.pFouls || 0)
     }), {
       points: 0, assists: 0, rebounds: 0, steals: 0, blocks: 0,
-      minutes: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0
+      minutes: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0,
+      turnovers: 0, fouls: 0
     });
 
     const averages = {
@@ -464,19 +545,33 @@ export async function getPlayerStats(playerId) {
       blocks: (totals.blocks / gamesPlayed.length).toFixed(1),
       minutes: (totals.minutes / gamesPlayed.length).toFixed(1),
       fgp: ((totals.fgm / totals.fga) * 100).toFixed(1),
-      tpp: ((totals.tpm / totals.tpa) * 100).toFixed(1)
+      tpp: ((totals.tpm / totals.tpa) * 100).toFixed(1),
+      ftp: ((totals.ftm / totals.fta) * 100).toFixed(1),
+      turnovers: (totals.turnovers / gamesPlayed.length).toFixed(1),
+      fouls: (totals.fouls / gamesPlayed.length).toFixed(1)
     };
+
+    // Format data for PlayerStatsCard
+    const formattedStats = {
+      firstName: playerInfo?.firstName || '',
+      lastName: playerInfo?.lastName || '',
+      team: playerInfo?.team || null,
+      season: getCurrentSeason(),
+      gamesPlayed: gamesPlayed.length,
+      ...averages
+    };
+
+    console.log('Player Info:', playerInfo);
+    console.log('Formatted Stats:', formattedStats);
 
     const result = {
       role: 'assistant',
-      type: 'text',
-      content: requestedStat && requestedStat !== 'all' ?
-        `Averaging ${averages[requestedStat]} ${requestedStat} per game this season.` :
-        `Averaging ${averages.points} points, ${averages.rebounds} rebounds, and ${averages.assists} assists in ${averages.minutes} minutes per game. Shooting ${averages.fgp}% from the field and ${averages.tpp}% from three.`
+      type: 'player_stats',
+      content: formattedStats
     };
 
     // Cache the result
-    cache.set(cacheKey, {
+    statsCache.set(cacheKey, {
       timestamp: Date.now(),
       data: result
     });
@@ -701,11 +796,19 @@ function processH2HGames(games) {
   ).join('\n');
 }
 
-// Update the handleBasketballQuery function
+// Enhanced handleBasketballQuery with caching
 export async function handleBasketballQuery(query) {
   console.log('Processing basketball query:', query);
   
   try {
+    // Generate cache key for the entire query
+    const queryKey = `query_${JSON.stringify(query)}`;
+    const cachedQuery = cache.get(queryKey);
+    if (cachedQuery && Date.now() - cachedQuery.timestamp < RATE_LIMIT.STATS_CACHE_DURATION) {
+      console.log('Using cached query result for:', queryKey);
+      return cachedQuery.data;
+    }
+
     // Handle legacy format
     if (query.type === 'player_stats') {
       const stats = await handleLegacyPlayerStats(query);
@@ -726,11 +829,14 @@ export async function handleBasketballQuery(query) {
       }
       
       const formattedResponse = formatQueryResponse(query.type, result);
-      return {
-        role: 'assistant',
-        type: 'text',
-        content: formattedResponse.content
-      };
+      
+      // Cache the final response
+      cache.set(queryKey, {
+        timestamp: Date.now(),
+        data: formattedResponse
+      });
+
+      return formattedResponse;
     }
     
     return {
@@ -843,6 +949,42 @@ function formatH2H(games) {
     `${game.date}: ${game.away.team} ${game.away.score} @ ${game.home.team} ${game.home.score}`
   ).join('\n');
 }
+
+// Add cache cleanup function
+function cleanupCaches() {
+  const now = Date.now();
+  
+  // Cleanup main cache
+  for (const [key, value] of cache.entries()) {
+    if (now - value.timestamp > RATE_LIMIT.CACHE_DURATION) {
+      cache.delete(key);
+    }
+  }
+  
+  // Cleanup player cache
+  for (const [key, value] of playerCache.entries()) {
+    if (now - value.timestamp > RATE_LIMIT.PLAYER_CACHE_DURATION) {
+      playerCache.delete(key);
+    }
+  }
+  
+  // Cleanup team cache
+  for (const [key, value] of teamCache.entries()) {
+    if (now - value.timestamp > RATE_LIMIT.TEAM_CACHE_DURATION) {
+      teamCache.delete(key);
+    }
+  }
+  
+  // Cleanup stats cache
+  for (const [key, value] of statsCache.entries()) {
+    if (now - value.timestamp > RATE_LIMIT.STATS_CACHE_DURATION) {
+      statsCache.delete(key);
+    }
+  }
+}
+
+// Run cache cleanup every hour
+setInterval(cleanupCaches, 60 * 60 * 1000);
 
 export default {
   findPlayerByName,

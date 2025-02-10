@@ -1,11 +1,14 @@
-import MessageAvatar from './MessageAvatar';
+import React from 'react';
 import ListingView from '../chat/ListingView';
 
-export default function RegularMessage({ message }) {
-  const isUser = message.role === 'user';
+export default function RegularMessage({ message, content: directContent }) {
+  // Get role from message object, defaulting to 'assistant' if not found
+  const role = message?.role || 'assistant';
+  const isUser = role === 'user';
   
-  // Get message content safely
-  const content = typeof message === 'string' ? message : message?.content;
+  // Get content safely
+  const content = directContent || (typeof message === 'string' ? message : message?.content);
+
   if (!content) return null;
 
   // Parse listings from message content if it exists
@@ -57,28 +60,17 @@ export default function RegularMessage({ message }) {
   const listings = parseListings(content);
   
   return (
-    <div className="mb-4">
-      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start space-x-3`}>
-        {!isUser && <MessageAvatar isUser={false} />}
-        <div className={`${listings ? 'w-full' : 'max-w-[85%] md:max-w-[70%]'} relative group
-          ${isUser ? 'ml-4' : 'mr-4'}`}
-        >
-          {!isUser && (
-            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-70 blur-[1px]"></div>
-          )}
-          <div className={`relative rounded-2xl p-4 shadow-xl backdrop-blur-sm border border-gray-700/30
-            ${isUser 
-              ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' 
-              : 'bg-gradient-to-br from-gray-800/90 to-gray-900/90 text-white'
-            }`}
-          >
-            <div className="space-y-2">
-              {formatContent(content)}
-              {listings && <ListingView listings={listings} />}
-            </div>
-          </div>
+    <div className={`relative ${isUser ? 'ml-auto' : ''}`}>
+      <div className={`relative rounded-2xl px-4 py-2 shadow-xl
+        ${isUser 
+          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white' 
+          : 'bg-gray-800/60 backdrop-blur-sm text-gray-100'
+        }`}
+      >
+        <div className="space-y-1">
+          {formatContent(content)}
+          {listings && <ListingView listings={listings} />}
         </div>
-        {isUser && <MessageAvatar isUser={true} />}
       </div>
     </div>
   );

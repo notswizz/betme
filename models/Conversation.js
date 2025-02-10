@@ -1,5 +1,10 @@
 import mongoose from 'mongoose';
 
+// Delete the model if it exists to force schema recompilation
+if (mongoose.models.Conversation) {
+  delete mongoose.models.Conversation;
+}
+
 const messageSchema = new mongoose.Schema({
   role: {
     type: String,
@@ -10,7 +15,7 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: false,
     default: 'text',
-    enum: ['text', 'betslip', 'open_bets', 'image', 'bet_success']
+    enum: ['text', 'betslip', 'open_bets', 'image', 'bet_success', 'player_stats']
   },
   content: {
     type: mongoose.Schema.Types.Mixed,
@@ -43,4 +48,7 @@ const conversationSchema = new mongoose.Schema({
   }
 });
 
-export default mongoose.models.Conversation || mongoose.model('Conversation', conversationSchema); 
+// Force model compilation with new schema
+const Conversation = mongoose.model('Conversation', conversationSchema);
+
+export default Conversation; 

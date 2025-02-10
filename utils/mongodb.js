@@ -13,27 +13,51 @@ if (!cached) {
 }
 
 async function connectDB() {
-  if (cached.conn) {
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-    };
-
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      console.log('Connected to MongoDB');
-      return mongoose;
-    });
-  }
-
   try {
-    cached.conn = await cached.promise;
-    return cached.conn;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
+    if (cached.conn) {
+      // Close existing connection if it exists
+      await cached.conn.disconnect();
+      cached.conn = null;
+      cached.promise = null;
+    }
+
+    if (!cached.promise) {
+      const opts = {
+        bufferCommands: false,
+        dbName: 'chatbet',  // Force database name
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+      };
+
+      // Parse the connection string to remove any database name if present
+      let uri = MONGODB_URI;
+      if (uri.includes('?')) {
+        uri = uri.replace(/\/[^/?]+\?/, '/chatbet?');
+      } else {
+        uri = uri + '/chatbet';
+      }
+
+      // Clear all models from the cache
+      Object.keys(mongoose.models).forEach(modelName => {
+        delete mongoose.models[modelName];
+      });
+
+      cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
+        console.log('Connected to MongoDB database:', mongoose.connection.db.databaseName);
+        return mongoose;
+      });
+    }
+
+    try {
+      cached.conn = await cached.promise;
+      return cached.conn;
+    } catch (e) {
+      cached.promise = null;
+      throw e;
+    }
+  } catch (error) {
+    console.error('MongoDB connection error:', error);
+    throw error;
   }
 }
 
