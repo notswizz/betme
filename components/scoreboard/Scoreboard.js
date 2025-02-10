@@ -121,15 +121,33 @@ export default function Scoreboard() {
                 </div>
               </div>
 
-              {/* Bet Now Button */}
-              <button className="w-full py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg 
-                               opacity-0 group-hover:opacity-100 transition-all duration-200 transform hover:scale-[1.02]
-                               hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Place Bet
-              </button>
+              {/* Indicators */}
+              <div className="grid grid-cols-[1fr,auto,1fr] gap-3 pt-3 border-t border-gray-700/30">
+                {/* Bet Button */}
+                <button className="flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 hover:from-blue-500/30 hover:to-blue-600/30 transition-all duration-300 group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-blue-400/10 to-blue-500/10 animate-gradient-x"></div>
+                  <span className="text-xl mb-0.5 transform group-hover:scale-110 transition-transform duration-300">🎯</span>
+                  <span className="text-[11px] font-medium text-blue-400 group-hover:text-blue-300">Bet</span>
+                </button>
+
+                {/* Total Bets Counter */}
+                <div className="flex flex-col items-center justify-center px-3">
+                  <span className="text-base font-bold bg-gradient-to-br from-gray-100 to-gray-300 text-transparent bg-clip-text">{156}</span>
+                  <span className="text-[10px] text-gray-500">Bets</span>
+                </div>
+                
+                {/* Analyze Button */}
+                <button className="flex flex-col items-center justify-center p-2 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-600/20 hover:from-indigo-500/30 hover:to-purple-600/30 transition-all duration-300 group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-400/10 to-indigo-500/10 animate-gradient-x"></div>
+                  <div className="relative flex items-center justify-center w-6 h-6 mb-0.5">
+                    <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping"></div>
+                    <svg className="w-5 h-5 text-indigo-400 group-hover:text-indigo-300 transform group-hover:scale-110 transition-all duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] font-medium text-indigo-400 group-hover:text-indigo-300">Analyze</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>

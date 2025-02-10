@@ -53,28 +53,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Insufficient tokens' });
     }
 
-    // Get or create conversation
-    let conversation;
-    if (conversationId) {
-      try {
-        conversation = await Conversation.findOne({
-          _id: conversationId,
-          userId: userId
-        });
-        if (!conversation) {
-          return res.status(404).json({ error: 'Conversation not found' });
-        }
-      } catch (err) {
-        return res.status(400).json({ error: 'Invalid conversation ID' });
-      }
-    } else {
-      conversation = new Conversation({
-        userId: userId,
-        messages: []
-      });
-      await conversation.save();
-    }
-
     // Handle action confirmation
     if (confirmAction) {
       const result = await handleAction(confirmAction, userId, token);
@@ -136,133 +114,103 @@ export default async function handler(req, res) {
       }
     }
 
-    // Analyze conversation
-    const currentMessages = [...conversation.messages, { role: 'user', content: message }];
-    const analysis = await analyzeConversation(currentMessages);
+    // Get or create conversation
+    let conversation = conversationId 
+      ? await Conversation.findById(conversationId)
+      : new Conversation({ 
+          messages: [],
+          userId: userId  // Add the required userId field
+        });
 
-    // Handle action requests
-    if (analysis.type === 'action') {
-      const confirmMessage = {
-        role: 'assistant',
-        content: analysis.content,
-        requiresConfirmation: true,
-        action: analysis.tool_calls[0]
+    // Add user message to conversation
+    const userMessage = {
+      role: 'user',
+      content: typeof message === 'string' ? message : message.content,
+      type: message.type || 'text'
+    };
+    
+    conversation.messages.push(userMessage);
+
+    // Get AI response
+    const aiResponse = await generateAIResponse([
+      ...conversation.messages
+    ]);
+
+    // Check if the response contains a bet slip
+    let betSlip = null;
+    try {
+      const content = aiResponse.content;
+      // Try to parse JSON from the response
+      if (typeof content === 'string' && (content.includes('"type":') || content.includes('"sport":'))) {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          betSlip = JSON.parse(jsonMatch[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing bet slip:', error);
+    }
+
+    // If we detected a bet slip, format it for the UI
+    if (betSlip && betSlip.type && betSlip.sport) {
+      const betSlipContent = {
+        type: betSlip.type,
+        sport: betSlip.sport,
+        team1: betSlip.team1,
+        team2: betSlip.team2,
+        line: betSlip.line || '',
+        odds: betSlip.odds || '-110',
+        stake: betSlip.stake || '10',
+        pick: betSlip.pick,
+        payout: calculatePayout(parseFloat(betSlip.stake) || 10, betSlip.odds || '-110').toFixed(2)
       };
 
-      conversation.messages.push(
-        { role: 'user', content: message },
-        confirmMessage
-      );
+      const formattedResponse = {
+        role: 'assistant',
+        type: 'betslip',
+        content: JSON.stringify(betSlipContent) // Stringify for conversation storage
+      };
+
+      conversation.messages.push(formattedResponse);
       await conversation.save();
 
       return res.status(200).json({
-        message: confirmMessage,
+        message: {
+          ...formattedResponse,
+          content: betSlipContent // Send the object for UI rendering
+        },
         conversationId: conversation._id.toString()
       });
     }
 
-    // Handle direct responses
-    if (analysis.type === 'direct') {
-      let responseMessage;
-      
-      if (analysis.action === 'balance_check') {
-        responseMessage = await checkBalance(userId);
-      } else if (analysis.action === 'view_listings') {
-        const result = await getListings(userId);
-        responseMessage = {
-          role: 'assistant',
-          content: result.message
-        };
-      }
+    // Handle regular chat response
+    const regularResponse = {
+      role: 'assistant',
+      content: aiResponse.content,
+      type: 'text'
+    };
 
-      if (responseMessage) {
-        conversation.messages.push(
-          { role: 'user', content: message },
-          responseMessage
-        );
-        await conversation.save();
-
-        return res.status(200).json({
-          message: responseMessage,
-          conversationId: conversation._id.toString()
-        });
-      }
-    }
-
-    // Normal chat response
-    const aiResponse = await handleNormalChat(currentMessages);
-    
-    conversation.messages.push(
-      { role: 'user', content: message },
-      aiResponse
-    );
+    conversation.messages.push(regularResponse);
     await conversation.save();
 
-    // Deduct token
-    user.tokenBalance -= 1;
-    await user.save();
-
-    res.status(200).json({
-      message: aiResponse,
-      conversationId: conversation._id.toString(),
-      action: analysis.type === 'action' ? analysis.tool_calls[0] : null,
-      remainingTokens: user.tokenBalance
+    return res.status(200).json({
+      message: regularResponse,
+      conversationId: conversation._id.toString()
     });
-
-    // Handle image upload and bet slip analysis
-    if (type === 'betslip_analysis') {
-      // Add the image message to conversation first
-      const imageMessage = {
-        role: 'user',
-        type: 'image',
-        content: message.text || 'Uploaded bet slip',
-        imageUrl: message.imageUrl
-      };
-      
-      conversation.messages.push(imageMessage);
-      await conversation.save();
-
-      // Use AI to analyze bet slip
-      const analysis = await generateAIResponse([
-        {
-          role: "system",
-          content: "You are a sports betting expert. Analyze bet slips and extract key information."
-        },
-        {
-          role: "user",
-          content: message.text || 'Please analyze this bet slip'
-        }
-      ]);
-
-      // Add AI response to conversation
-      const aiMessage = {
-        role: 'assistant',
-        content: analysis.content,
-        type: 'betslip',
-        content: {
-          type: 'Spread',
-          sport: 'NFL',
-          team1: 'Kansas City Chiefs',
-          team2: 'Philadelphia Eagles',
-          line: '10',
-          odds: '-105',
-          stake: '10',
-          payout: '19.52'
-        }
-      };
-
-      conversation.messages.push(aiMessage);
-      await conversation.save();
-
-      return res.status(200).json({
-        success: true,
-        message: aiMessage,
-        conversationId: conversation._id.toString()
-      });
-    }
 
   } catch (error) {
     console.error('Chat process error:', error);
     return res.status(500).json({ message: 'Error processing chat' });
   }
+}
+
+// Helper function to calculate payout
+function calculatePayout(stake, odds) {
+  const numOdds = parseInt(odds);
+  if (numOdds > 0) {
+    return stake + (stake * numOdds) / 100;
+  } else if (numOdds < 0) {
+    return stake + (stake * 100) / Math.abs(numOdds);
+  }
+  return stake;
 } 

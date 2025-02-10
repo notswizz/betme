@@ -47,11 +47,13 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
     return (
       <div className="w-full">
         <BetSlipMessage 
-          initialData={message.content} 
-          onSubmit={(data) => onConfirmAction({
-            name: 'place_bet',
-            ...data
-          })}
+          initialData={typeof message.content === 'string' ? JSON.parse(message.content) : message.content}
+          onSubmit={(data) => {
+            onConfirmAction({
+              name: 'place_bet',
+              ...data
+            });
+          }}
         />
       </div>
     );
@@ -63,8 +65,14 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
     return (
       <div className="mb-3">
         <div className={`flex justify-start items-start space-x-3`}>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-            <span className="text-white text-sm font-medium">AI</span>
+          <div className="relative w-9 h-9 rounded-xl shadow-lg group">
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-90"></div>
+            <div className="absolute inset-[1px] rounded-xl bg-gray-900 flex items-center justify-center">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-7 h-7 bg-blue-500/20 rounded-xl animate-ping"></div>
+                <span className="relative text-sm font-medium bg-gradient-to-r from-blue-400 to-blue-300 text-transparent bg-clip-text">AI</span>
+              </div>
+            </div>
           </div>
           <div className="flex-1 max-w-[320px] rounded-2xl bg-gradient-to-br from-gray-800/80 to-gray-900/80 text-white shadow-xl border border-gray-700/30 backdrop-blur-sm">
             <div className="p-3 space-y-2">
@@ -75,7 +83,7 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
               </div>
               
               {/* Main Bet Info */}
-              <div className="bg-gray-900/50 rounded-xl p-3 space-y-3">
+              <div className="bg-gray-900/50 rounded-xl p-3 space-y-3 border border-gray-800">
                 {/* Type & Sport */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -93,7 +101,7 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
                   <div className="text-xs text-gray-500">Matchup</div>
                   <div className="text-sm font-medium text-white flex items-center gap-2">
                     <span>{betData.team1}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800">VS</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700">VS</span>
                     <span>{betData.team2}</span>
                   </div>
                 </div>
@@ -112,7 +120,7 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
               </div>
 
               {/* Stake & Payout */}
-              <div className="bg-gray-900/50 rounded-xl p-3">
+              <div className="bg-gray-900/50 rounded-xl p-3 border border-gray-800">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-xs text-gray-500">Your Stake</div>
@@ -126,7 +134,7 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
               </div>
 
               {/* Bet ID */}
-              <div className="bg-gray-900/50 rounded-xl p-2">
+              <div className="bg-gray-900/50 rounded-xl p-2 border border-gray-800">
                 <div className="text-xs text-gray-500">Bet ID</div>
                 <div className="font-mono text-xs text-gray-400 truncate">{betData._id}</div>
               </div>
@@ -311,12 +319,12 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
     <div className="mb-4">
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start space-x-3`}>
         {!isUser && (
-          <div className="relative w-8 h-8 rounded-full shadow-lg group">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x"></div>
-            <div className="absolute inset-0.5 rounded-full bg-gray-900 flex items-center justify-center">
+          <div className="relative w-9 h-9 rounded-xl shadow-lg group">
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-90"></div>
+            <div className="absolute inset-[1px] rounded-xl bg-gray-900 flex items-center justify-center">
               <div className="relative flex items-center justify-center">
-                <div className="absolute w-6 h-6 bg-blue-500/20 rounded-full animate-ping"></div>
-                <span className="relative text-xs font-medium bg-gradient-to-r from-blue-400 to-blue-300 text-transparent bg-clip-text">AI</span>
+                <div className="absolute w-7 h-7 bg-blue-500/20 rounded-xl animate-ping"></div>
+                <span className="relative text-sm font-medium bg-gradient-to-r from-blue-400 to-blue-300 text-transparent bg-clip-text">AI</span>
               </div>
             </div>
           </div>
@@ -325,9 +333,9 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
           ${isUser ? 'ml-4' : 'mr-4'}`}
         >
           {!isUser && (
-            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-70"></div>
+            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-70 blur-[1px]"></div>
           )}
-          <div className={`relative rounded-2xl p-4 shadow-xl backdrop-blur-sm
+          <div className={`relative rounded-2xl p-4 shadow-xl backdrop-blur-sm border border-gray-700/30
             ${isUser 
               ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' 
               : 'bg-gradient-to-br from-gray-800/90 to-gray-900/90 text-white'
@@ -340,8 +348,11 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
           </div>
         </div>
         {isUser && (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
-            <span className="text-white text-sm font-medium">You</span>
+          <div className="relative w-9 h-9 rounded-xl shadow-lg">
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600"></div>
+            <div className="absolute inset-[1px] rounded-xl bg-gray-900 flex items-center justify-center">
+              <span className="text-sm font-medium text-blue-400">You</span>
+            </div>
           </div>
         )}
       </div>

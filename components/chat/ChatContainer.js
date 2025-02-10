@@ -238,32 +238,32 @@ export default function ChatContainer() {
             <div className="h-full flex flex-col">
               <div className="w-full mt-4">
                 <Scoreboard />
-                <div className="mt-8 grid grid-cols-2 gap-3 max-w-2xl mx-auto px-4">
+                <div className="mt-6 grid grid-cols-2 gap-3 max-w-2xl mx-auto px-4">
                   <button
                     onClick={() => handleSendMessage("I want to place a bet")}
                     className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
                   >
                     <span className="flex items-center gap-2">
                       <span className="text-blue-400 group-hover:text-blue-300">🎯</span>
-                      Place a Bet
+                      <div className="font-medium">Place a Bet</div>
                     </span>
                   </button>
                   <button
-                    onClick={() => handleSendMessage("Show me today's NBA scores")}
+                    onClick={() => handleSendMessage("Show me today's best bets")}
                     className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="text-blue-400 group-hover:text-blue-300">🏀</span>
-                      Check Scores
+                      <span className="text-blue-400 group-hover:text-blue-300">🔥</span>
+                      <div className="font-medium">Best Bets</div>
                     </span>
                   </button>
                   <button
-                    onClick={() => handleSendMessage("What are the best odds right now?")}
+                    onClick={() => handleSendMessage("Show me today's scores")}
                     className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
                   >
                     <span className="flex items-center gap-2">
                       <span className="text-blue-400 group-hover:text-blue-300">📊</span>
-                      Best Odds
+                      <div className="font-medium">Check Scores</div>
                     </span>
                   </button>
                   <button
@@ -271,8 +271,8 @@ export default function ChatContainer() {
                     className="p-3 bg-gray-800/50 hover:bg-gray-800/70 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-200 text-left border border-gray-700/30 hover:border-blue-500/30 group"
                   >
                     <span className="flex items-center gap-2">
-                      <span className="text-blue-400 group-hover:text-blue-300">💰</span>
-                      Check Balance
+                      <span className="text-blue-400 group-hover:text-blue-300">📸</span>
+                      <div className="font-medium">Upload Betslip</div>
                     </span>
                   </button>
                 </div>

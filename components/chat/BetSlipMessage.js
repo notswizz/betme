@@ -12,6 +12,7 @@ const BET_TYPES = [
 export default function BetSlipMessage({ initialData, onSubmit }) {
   const [betSlip, setBetSlip] = useState(initialData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState(null);
 
   // Add effect to handle Moneyline bet type
@@ -44,6 +45,7 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
           stake: parseFloat(betSlip.stake),
           payout: betSlip.payout
         });
+        setIsSubmitted(true);
       } else {
         setError('Failed to place bet. Please try again.');
       }
@@ -75,6 +77,18 @@ export default function BetSlipMessage({ initialData, onSubmit }) {
 
     calculatePayout();
   }, [betSlip.stake, betSlip.odds]);
+
+  // If bet is submitted, don't show the form
+  if (isSubmitted) {
+    return (
+      <div className="w-full p-4 rounded-xl bg-gray-800/50 border border-gray-700/50">
+        <div className="flex items-center gap-2 text-green-400">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+          <span className="text-sm font-medium">Bet submitted for confirmation...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl p-3 w-full md:max-w-md mx-auto border border-gray-700">
