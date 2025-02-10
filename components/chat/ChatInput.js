@@ -152,13 +152,32 @@ Text: ${extractedText}`
           <button
             type="submit"
             disabled={disabled || processing}
-            className={`w-full p-2.5 rounded-xl font-medium ${
+            className={`w-full p-2.5 rounded-xl font-medium relative group overflow-hidden ${
               disabled || processing
                 ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:scale-95'
+                : 'hover:scale-[1.02] active:scale-95'
             } text-white transition-all duration-200 shadow-md hover:shadow-lg text-base`}
           >
-            Send
+            {/* Animated gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-90"></div>
+            
+            {/* Pulsing effect */}
+            <div className="absolute inset-0 bg-white/20 scale-x-0 animate-pulse group-hover:scale-x-100 transition-transform duration-700 ease-in-out"></div>
+            
+            {/* Button content */}
+            <div className="relative flex items-center justify-center gap-2">
+              <span>Send</span>
+              <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                <svg 
+                  className="w-3 h-3 text-white transform rotate-90 group-hover:translate-y-0.5 transition-transform duration-200" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
           </button>
         )}
       </form>

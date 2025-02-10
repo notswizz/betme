@@ -308,24 +308,40 @@ export default function ChatMessage({ message, onConfirmAction, onCancelAction }
   const listings = parseListings(content);
   
   return (
-    <div className="mb-2 md:mb-4">
-      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start space-x-2`}>
+    <div className="mb-4">
+      <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} items-start space-x-3`}>
         {!isUser && (
-          <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs md:text-sm">AI</span>
+          <div className="relative w-8 h-8 rounded-full shadow-lg group">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x"></div>
+            <div className="absolute inset-0.5 rounded-full bg-gray-900 flex items-center justify-center">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-6 h-6 bg-blue-500/20 rounded-full animate-ping"></div>
+                <span className="relative text-xs font-medium bg-gradient-to-r from-blue-400 to-blue-300 text-transparent bg-clip-text">AI</span>
+              </div>
+            </div>
           </div>
         )}
-        <div className={`${listings ? 'w-full' : 'max-w-[85%] md:max-w-[70%]'} rounded-2xl p-3 md:p-4 ${
-          isUser 
-            ? 'bg-blue-600 text-white' 
-            : 'bg-white text-gray-800 shadow-md'
-        }`}>
-          {formatContent(content)}
-          {listings && <ListingView listings={listings} />}
+        <div className={`${listings ? 'w-full' : 'max-w-[85%] md:max-w-[70%]'} relative group
+          ${isUser ? 'ml-4' : 'mr-4'}`}
+        >
+          {!isUser && (
+            <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-500 animate-gradient-x opacity-70"></div>
+          )}
+          <div className={`relative rounded-2xl p-4 shadow-xl backdrop-blur-sm
+            ${isUser 
+              ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' 
+              : 'bg-gradient-to-br from-gray-800/90 to-gray-900/90 text-white'
+            }`}
+          >
+            <div className="space-y-2">
+              {formatContent(content)}
+              {listings && <ListingView listings={listings} />}
+            </div>
+          </div>
         </div>
         {isUser && (
-          <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gray-600 flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs md:text-sm">You</span>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg">
+            <span className="text-white text-sm font-medium">You</span>
           </div>
         )}
       </div>
@@ -395,4 +411,18 @@ function handleBetSubmit(betSlipData) {
     console.error('Error submitting bet:', error);
     return null;
   }
-} 
+}
+
+// Add this to your global CSS or Tailwind config
+const styles = `
+  @keyframes gradient-x {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  .animate-gradient-x {
+    background-size: 200% 200%;
+    animation: gradient-x 3s ease infinite;
+  }
+`; 

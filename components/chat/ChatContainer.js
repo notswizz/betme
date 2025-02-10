@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import NewChatButton from './NewChatButton';
 import TokenBalance from '../wallet/TokenBalance';
+import BetStats from '../wallet/BetStats';
 import Scoreboard from '../scoreboard/Scoreboard';
 import { isAuthenticated } from '@/utils/auth';
 
@@ -11,6 +12,16 @@ export default function ChatContainer() {
   const [conversationId, setConversationId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const startNewChat = () => {
     setMessages([]);
@@ -172,6 +183,11 @@ export default function ChatContainer() {
     }]);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.reload();
+  };
+
   return (
     <div className="relative flex h-full">
       {/* Mobile Menu Toggle Button */}
@@ -189,9 +205,21 @@ export default function ChatContainer() {
                       ${isSideMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
                       md:translate-x-0`}>
         <div className="flex-1 space-y-4">
-          <TokenBalance />
           <NewChatButton onClick={startNewChat} />
+          <TokenBalance />
+          <BetStats />
         </div>
+        
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="w-full py-3 px-4 bg-gray-800/50 hover:bg-gray-800 text-gray-400 hover:text-white rounded-xl transition-all duration-200 flex items-center gap-2 group mt-4"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span className="text-sm font-medium">Logout</span>
+        </button>
       </div>
 
       {/* Overlay for mobile menu */}
@@ -205,7 +233,7 @@ export default function ChatContainer() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full">
         {/* Messages Section */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 snap-y snap-mandatory">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col">
               <div className="w-full mt-12">
@@ -251,16 +279,20 @@ export default function ChatContainer() {
               </div>
             </div>
           ) : (
-            messages.map((msg, index) => (
-              <ChatMessage
-                key={index}
-                message={msg}
-                onConfirmAction={handleConfirmAction}
-                onCancelAction={() => {
-                  setMessages(prev => prev.slice(0, -1));
-                }}
-              />
-            ))
+            <>
+              {messages.map((msg, index) => (
+                <div key={index} className="snap-start">
+                  <ChatMessage
+                    message={msg}
+                    onConfirmAction={handleConfirmAction}
+                    onCancelAction={() => {
+                      setMessages(prev => prev.slice(0, -1));
+                    }}
+                  />
+                </div>
+              ))}
+              <div ref={messagesEndRef} className="h-4" />
+            </>
           )}
         </div>
 

@@ -49,7 +49,7 @@ Extract and validate the following from user messages:
 - Provide context for odds movements
 - Note important game factors or conditions
 
-Always maintain accuracy in calculations and verify all betting details before proceeding.`
+Always maintain accuracy in calculations and verify all betting details before proceeding. Always keep messages concise and to the point, but friendly and professional with some swagger`
         },
         ...messages
       ],
