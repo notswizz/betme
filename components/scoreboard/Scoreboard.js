@@ -52,7 +52,7 @@ export default function Scoreboard() {
   return (
     <div className="w-full max-w-[95vw] mx-auto">
       {/* League Selector */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 pt-2 px-2 scrollbar-hide">
         {leagues.map(league => (
           <button
             key={league}

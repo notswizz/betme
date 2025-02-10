@@ -68,10 +68,22 @@ Files involved:
 - `models/Bet.js`: Bet data schema
 - `pages/api/bets/create.js`: Bet creation endpoint
 
+Supported bet types:
+- Spread
+- Moneyline
+- Over/Under
+- Parlay
+- Prop
+- Future
+
 Betting flow:
 1. User initiates bet (through chat or image)
-2. AI analyzes request via venice.js
-3. Bet details structured and validated
+2. AI analyzes request via venice.js (using llama-3.3-70b model)
+3. Bet details structured and validated with comprehensive error checking:
+   - Valid bet type verification
+   - Stake amount validation
+   - User balance verification
+   - Odds calculation validation
 4. BetSlipMessage component displays bet details:
    - Sport and type badges
    - Team matchup with hover effects
@@ -210,19 +222,20 @@ Betting flow:
 
 ## Message Processing Pipeline
 Primary files:
-- `pages/api/chat/process.js`: Central message processing hub
+- `pages/api/chat/process.js`: Central message processing hub with comprehensive validation
 - `utils/convoAnalyze.js`: Message analysis and action handling
-- `utils/venice.js`: AI integration for message understanding
+- `utils/venice.js`: AI integration using llama-3.3-70b model for message understanding
 - `utils/tesseract.js`: OCR for bet slip processing
 
 Message flow:
 1. User sends message through ChatContainer.js
 2. Message is sent to /api/chat/process endpoint with JWT token
 3. Process.js:
-   - Verifies authentication
+   - Verifies authentication and token validity
+   - Performs detailed message validation
    - Checks token balance
    - Manages conversation history
-   - Routes message to appropriate handler
+   - Routes message to appropriate handler with error handling
 
 ### Message Types and Handling
 
