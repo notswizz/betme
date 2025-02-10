@@ -80,10 +80,16 @@ const RateLimiter = {
 const API_ERROR_HANDLERS = {
   429: async (error, retryFn) => {
     const retryAfter = parseInt(error.headers.get('Retry-After') || '60');
+    console.log(`Rate limited. Waiting ${retryAfter} seconds...`);
     await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
     return retryFn();
   },
   404: () => null,
+  504: async (error, retryFn) => {
+    console.log('Gateway timeout, retrying...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    return retryFn();
+  },
   default: (error) => {
     console.error('API Error:', error);
     throw error;
@@ -865,8 +871,10 @@ function processH2HGames(games) {
   ).join('\n');
 }
 
-// Enhanced fetchFromAPI with better error handling and rate limiting
-async function fetchFromAPI(endpoint, params = {}) {
+// Enhanced fetchFromAPI with better error handling and retries
+async function fetchFromAPI(endpoint, params = {}, retryCount = 0) {
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 2000; // 2 seconds
   const queryString = new URLSearchParams(params).toString();
   const cacheKey = `${endpoint}?${queryString}`;
   
@@ -884,6 +892,7 @@ async function fetchFromAPI(endpoint, params = {}) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), RATE_LIMIT.REQUEST_TIMEOUT);
 
+    console.log(`Fetching ${endpoint} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
     const response = await fetch(`https://${NBA_API_HOST}/${endpoint}?${queryString}`, {
       method: 'GET',
       headers: {
@@ -896,17 +905,39 @@ async function fetchFromAPI(endpoint, params = {}) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const handler = API_ERROR_HANDLERS[response.status] || API_ERROR_HANDLERS.default;
+      const statusCode = response.status;
+      console.error(`API Error (${statusCode}) for ${endpoint}:`, await response.text());
+      
+      // Handle specific error cases
+      if (statusCode === 504 || statusCode === 502 || statusCode === 503) {
+        if (retryCount < MAX_RETRIES) {
+          console.log(`Retrying after ${RETRY_DELAY}ms...`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          return fetchFromAPI(endpoint, params, retryCount + 1);
+        }
+      }
+      
+      const handler = API_ERROR_HANDLERS[statusCode] || API_ERROR_HANDLERS.default;
       return handler(response, () => fetchFromAPI(endpoint, params));
     }
 
     const data = await response.json();
-    cache.set(cacheKey, data, CACHE_TYPES.QUERY);
+    
+    // Only cache successful responses
+    if (data && data.response) {
+      cache.set(cacheKey, data, CACHE_TYPES.QUERY);
+    }
+    
     return data;
   } catch (error) {
     if (error.name === 'AbortError') {
       console.error('Request timeout:', endpoint);
-      throw new Error('Request timeout');
+      if (retryCount < MAX_RETRIES) {
+        console.log(`Retrying after timeout (attempt ${retryCount + 1}/${MAX_RETRIES + 1})...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        return fetchFromAPI(endpoint, params, retryCount + 1);
+      }
+      throw new Error(`Request timeout after ${MAX_RETRIES + 1} attempts`);
     }
     throw error;
   }
