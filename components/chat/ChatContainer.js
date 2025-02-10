@@ -259,47 +259,47 @@ export default function ChatContainer() {
               <div className="h-full flex flex-col justify-center -mt-16">
                 <div className="w-full max-w-full overflow-x-hidden">
                   <Scoreboard />
-                  <div className="mt-4 grid grid-cols-2 gap-3 max-w-xl mx-auto px-4">
+                  <div className="mt-4 grid grid-cols-2 gap-2 max-w-md mx-auto px-4">
                     <button
                       onClick={() => handleNewMessage("I want to place a bet")}
-                      className="aspect-[5/3] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-2xl border border-gray-700/30 hover:border-blue-500/30 p-3 group transition-all duration-200 hover:scale-[1.02]"
+                      className="aspect-[2/1] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-xl border border-gray-700/30 hover:border-blue-500/30 p-2 group transition-all duration-200 hover:scale-[1.02]"
                     >
-                      <div className="h-full flex flex-col items-center justify-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                          <span className="text-lg">🎯</span>
+                      <div className="h-full flex items-center justify-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                          <span className="text-base">🎯</span>
                         </div>
                         <div className="font-medium text-gray-300 group-hover:text-white text-center text-sm">Place a Bet</div>
                       </div>
                     </button>
                     <button
                       onClick={() => handleNewMessage("Show me today's best bets")}
-                      className="aspect-[5/3] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-2xl border border-gray-700/30 hover:border-blue-500/30 p-3 group transition-all duration-200 hover:scale-[1.02]"
+                      className="aspect-[2/1] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-xl border border-gray-700/30 hover:border-blue-500/30 p-2 group transition-all duration-200 hover:scale-[1.02]"
                     >
-                      <div className="h-full flex flex-col items-center justify-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                          <span className="text-lg">🔥</span>
+                      <div className="h-full flex items-center justify-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                          <span className="text-base">🔥</span>
                         </div>
                         <div className="font-medium text-gray-300 group-hover:text-white text-center text-sm">Best Bets</div>
                       </div>
                     </button>
                     <button
                       onClick={() => handleNewMessage("Show me open bets")}
-                      className="aspect-[5/3] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-2xl border border-gray-700/30 hover:border-blue-500/30 p-3 group transition-all duration-200 hover:scale-[1.02]"
+                      className="aspect-[2/1] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-xl border border-gray-700/30 hover:border-blue-500/30 p-2 group transition-all duration-200 hover:scale-[1.02]"
                     >
-                      <div className="h-full flex flex-col items-center justify-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                          <span className="text-lg">📊</span>
+                      <div className="h-full flex items-center justify-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                          <span className="text-base">📊</span>
                         </div>
                         <div className="font-medium text-gray-300 group-hover:text-white text-center text-sm">Open Bets</div>
                       </div>
                     </button>
                     <button
                       onClick={() => handleNewMessage("What's my token balance?")}
-                      className="aspect-[5/3] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-2xl border border-gray-700/30 hover:border-blue-500/30 p-3 group transition-all duration-200 hover:scale-[1.02]"
+                      className="aspect-[2/1] bg-gradient-to-br from-gray-800/50 to-gray-900/50 hover:from-gray-800/70 hover:to-gray-900/70 rounded-xl border border-gray-700/30 hover:border-blue-500/30 p-2 group transition-all duration-200 hover:scale-[1.02]"
                     >
-                      <div className="h-full flex flex-col items-center justify-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                          <span className="text-lg">💰</span>
+                      <div className="h-full flex items-center justify-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                          <span className="text-base">💰</span>
                         </div>
                         <div className="font-medium text-gray-300 group-hover:text-white text-center text-sm">Check Balance</div>
                       </div>
