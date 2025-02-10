@@ -96,62 +96,79 @@ export default function TokenBalance() {
   };
 
   return (
-    <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-4 w-full">
+    <div className="bg-gradient-to-br from-gray-900/95 to-gray-800/95 backdrop-blur-xl rounded-2xl p-4 w-full mt-12 border border-gray-800/50 shadow-xl">
       <div className="flex flex-col space-y-3">
         {/* Balance Display */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+        <div className="flex items-center justify-between py-2">
+          <div className="flex items-center gap-4">
+            {/* Enhanced Token Icon */}
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center shadow-lg relative group overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/30 to-blue-400/0 opacity-0 group-hover:opacity-100 animate-gradient-x transition-opacity duration-700"></div>
+              <div className="absolute inset-0 bg-blue-500/20 rounded-xl animate-pulse-slow"></div>
+              <div className="relative flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" className="opacity-50"/>
+                  <path d="M12 6v12M8 12h8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-90"/>
+                  <path d="M12 2v4M12 18v4M6 12H2M22 12h-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="opacity-70"/>
+                </svg>
+              </div>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-white">{balance.toLocaleString()}</div>
-              <div className="text-xs text-gray-400">Available Tokens</div>
+            <div className="min-w-0 flex-1">
+              <div className="text-2xl font-bold bg-gradient-to-r from-blue-100 via-blue-300 to-blue-100 text-transparent bg-clip-text animate-gradient-x">{balance.toLocaleString()}</div>
+              <div className="text-sm text-gray-400 mt-0.5">Available Tokens</div>
             </div>
           </div>
-          <button
-            onClick={() => setShowAddTokens(!showAddTokens)}
-            className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium rounded-lg 
-            hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl
-            flex items-center gap-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Add
-          </button>
+          {/* Enhanced Add Button */}
+          <div className="flex-shrink-0 -mr-1.5 mt-1">
+            <button
+              onClick={() => setShowAddTokens(!showAddTokens)}
+              className="w-10 h-10 rounded-xl relative group overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 opacity-90 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/30 to-blue-400/0 opacity-0 group-hover:opacity-100 animate-gradient-x"></div>
+              <div className="absolute inset-[1px] rounded-[10px] bg-gray-900/90 flex items-center justify-center">
+                <div className="relative transform group-hover:scale-110 transition-transform duration-300">
+                  <div className="absolute inset-0 w-4 h-4 bg-blue-400/20 rounded-lg animate-ping"></div>
+                  <svg className="w-4 h-4 text-blue-400 relative" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                </div>
+              </div>
+            </button>
+          </div>
         </div>
 
         {/* Add Tokens Form - Only shown when showAddTokens is true */}
         {showAddTokens && (
           <form onSubmit={handleAddTokens} className="flex flex-col gap-2 pt-2">
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Amount"
-              className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700/50 rounded-lg text-white placeholder-gray-500 
-              focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            />
+            <div className="relative">
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="Amount"
+                className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 
+                focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+              />
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 animate-gradient-x pointer-events-none"></div>
+            </div>
             <button
               type="submit"
               disabled={loading}
-              className={`w-full py-2 rounded-lg font-medium text-sm ${
-                loading
-                  ? 'bg-gray-700 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
-              } text-white transition-all duration-200 shadow-lg hover:shadow-xl`}
+              className="relative w-full py-2.5 rounded-xl font-medium text-sm overflow-hidden group"
             >
-              {loading ? 'Adding...' : 'Confirm Add Tokens'}
+              <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-green-600 to-green-500 opacity-90 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-green-400/0 via-green-400/30 to-green-400/0 opacity-0 group-hover:opacity-100 animate-gradient-x"></div>
+              <span className="relative text-white transform group-hover:scale-105 transition-transform duration-300">
+                {loading ? 'Adding...' : 'Confirm Add Tokens'}
+              </span>
             </button>
           </form>
         )}
 
         {/* Error Message */}
         {error && (
-          <div className="text-red-400 text-sm mt-1">
+          <div className="text-red-400 text-sm mt-1 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
             {error}
           </div>
         )}
