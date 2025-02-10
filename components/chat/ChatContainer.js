@@ -239,13 +239,30 @@ export default function ChatContainer() {
       </button>
 
       {/* Side Menu - Hidden on mobile by default, shown when isSideMenuOpen is true */}
-      <div className={`fixed md:relative md:flex flex-col w-64 h-full bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 border-r border-gray-800 p-4 space-y-4 transition-all duration-300 ease-in-out z-40
+      <div className={`fixed md:relative md:flex flex-col w-64 h-full bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 border-r border-gray-800 p-4 transition-all duration-300 ease-in-out z-40
                       ${isSideMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} 
                       md:translate-x-0 md:shadow-none`}>
         <div className="flex-1 space-y-4">
           <NewChatButton onClick={startNewChat} />
           <TokenBalance />
           <BetStats />
+        </div>
+        
+        {/* BetChat Logo and Title */}
+        <div className="pt-1 border-t border-gray-800/50">
+          <div className="flex items-center gap-3 px-2 py-1.5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/0 via-blue-400/30 to-blue-400/0 opacity-0 group-hover:opacity-100 animate-gradient-x"></div>
+              <div className="relative flex items-center justify-center">
+                <div className="absolute inset-0 w-6 h-6 bg-blue-400/20 rounded-lg animate-pulse"></div>
+                <span className="text-xl relative">🎯</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-bold bg-gradient-to-r from-blue-100 via-blue-300 to-blue-100 text-transparent bg-clip-text">BetChat</h3>
+              <p className="text-xs text-gray-500">AI-Powered Betting Assistant</p>
+            </div>
+          </div>
         </div>
       </div>
 
