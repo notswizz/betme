@@ -1,58 +1,119 @@
-import { getPlayerStats } from '../services/playerService';
-import { findPlayerByName } from '../services/playerService';
+import nbaClient from './nbaClient';
+import { getCurrentSeason, CACHE_CONFIG } from './config';
 import { calculatePlayerAverages } from './statsUtils';
-import cache from './cache';
-import rateLimiter from './rateLimiter';
-import { RATE_LIMIT } from './rateLimit';
-import nbaApiClient from './nbaClient';
+import { teamMapping } from './teamMapping';
 
-const CURRENT_SEASON = new Date().getFullYear();
+// Known player-team mappings
+const PLAYER_TEAMS = {
+  "Trae Young": "Atlanta Hawks",
+  "LeBron James": "Los Angeles Lakers",
+  "Stephen Curry": "Golden State Warriors",
+  "Kevin Durant": "Phoenix Suns"
+};
+
+// NBA Teams mapping
+const NBA_TEAMS = {
+  "Hawks": 1,
+  "Celtics": 2,
+  "Nets": 3,
+  "Hornets": 4,
+  "Bulls": 5,
+  "Cavaliers": 6,
+  "Mavericks": 7,
+  "Nuggets": 8,
+  "Pistons": 9,
+  "Warriors": 10,
+  "Rockets": 11,
+  "Pacers": 12,
+  "Clippers": 13,
+  "Lakers": 14,
+  "Grizzlies": 15,
+  "Heat": 16,
+  "Bucks": 17,
+  "Timberwolves": 18,
+  "Pelicans": 19,
+  "Knicks": 20,
+  "Thunder": 21,
+  "Magic": 22,
+  "76ers": 23,
+  "Suns": 24,
+  "Trail Blazers": 25,
+  "Kings": 26,
+  "Spurs": 27,
+  "Raptors": 28,
+  "Jazz": 29,
+  "Wizards": 30
+};
 
 // Function to get player statistics
-async function fetchPlayerStatistics(playerName, season = CURRENT_SEASON) {
+export async function fetchPlayerStatistics(playerName, season = getCurrentSeason()) {
   try {
-    // First find the player
-    const player = await findPlayerByName(playerName);
+    // Get team ID for known players
+    let teamId = null;
+    if (PLAYER_TEAMS[playerName]) {
+      teamId = teamMapping[PLAYER_TEAMS[playerName]];
+    }
+
+    // Search for player with team if known
+    const response = await nbaClient.get('/players', {
+      params: {
+        ...(teamId && { team: teamId }),
+        season: season
+      },
+      cacheDuration: CACHE_CONFIG.STATS_DURATION
+    });
+
+    console.log('Looking for player:', playerName);
+    
+    // Find the player in the results
+    const player = response.find(p => {
+      const fullName = `${p.firstname} ${p.lastname}`.toLowerCase();
+      const searchName = playerName.toLowerCase();
+      const isMatch = fullName.includes(searchName) || searchName.includes(fullName);
+      if (isMatch) {
+        console.log('Found player:', p.firstname, p.lastname, 'ID:', p.id);
+      }
+      return isMatch;
+    });
+
     if (!player) {
+      console.log('Player not found in response');
       return {
         error: true,
         message: `Could not find player "${playerName}". Please check the spelling.`
       };
     }
 
-    // Check cache first
-    const cacheKey = `player_stats_${player.id}_${season}`;
-    const cachedStats = cache.get(cacheKey);
-    if (cachedStats) {
-      return {
-        error: false,
-        player,
-        stats: cachedStats,
-        averages: calculatePlayerAverages(cachedStats)
-      };
-    }
+    console.log('Getting stats for player ID:', player.id);
 
-    // Fetch fresh stats
-    const stats = await rateLimiter.add(() =>
-      nbaApiClient.get('/players/statistics', {
-        params: {
-          id: player.id,
-          season: season
-        }
-      })
-    );
+    // Fetch player stats
+    const stats = await nbaClient.get('/players/statistics', {
+      params: {
+        id: player.id,
+        season: season
+      },
+      cacheDuration: CACHE_CONFIG.STATS_DURATION
+    });
 
     if (!stats || !Array.isArray(stats)) {
       throw new Error('Invalid stats data received from API');
     }
 
-    // Calculate averages and cache results
+    // Calculate averages
     const averages = calculatePlayerAverages(stats);
-    cache.set(cacheKey, stats, RATE_LIMIT.STATS_CACHE_DURATION);
+
+    // Add team info to response
+    const teamInfo = player.leagues?.standard?.active ? {
+      name: PLAYER_TEAMS[playerName] || 'NBA Team',
+      logo: `https://cdn.nba.com/logos/nba/${teamId}/global/L/logo.svg`
+    } : null;
 
     return {
       error: false,
-      player,
+      player: {
+        ...player,
+        team: teamInfo
+      },
       stats,
       averages
     };
@@ -66,8 +127,47 @@ async function fetchPlayerStatistics(playerName, season = CURRENT_SEASON) {
   }
 }
 
+// Function to get team's next game
+export async function getTeamNextGame(teamName) {
+  try {
+    const games = await nbaClient.get('/games', {
+      params: {
+        team: teamName,
+        season: getCurrentSeason(),
+        status: 'scheduled'
+      },
+      cacheDuration: CACHE_CONFIG.GAMES_DURATION
+    });
+
+    if (!games || !Array.isArray(games) || games.length === 0) {
+      return {
+        error: true,
+        message: `No upcoming games found for ${teamName}`
+      };
+    }
+
+    const nextGame = games[0]; // Games should be sorted by date
+
+    return {
+      error: false,
+      data: {
+        date: nextGame.date,
+        homeTeam: nextGame.teams.home.name,
+        awayTeam: nextGame.teams.away.name,
+        venue: nextGame.arena.name
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching next game:', error);
+    return {
+      error: true,
+      message: 'Failed to fetch next game information'
+    };
+  }
+}
+
 // Function to handle basketball queries
-async function handleBasketballQuery({ type, player, stat, season = CURRENT_SEASON }) {
+export async function handleBasketballQuery({ type, player, stat, season = getCurrentSeason() }) {
   try {
     switch (type) {
       case 'player_stats': {
@@ -79,7 +179,7 @@ async function handleBasketballQuery({ type, player, stat, season = CURRENT_SEAS
           };
         }
 
-        // Format data for PlayerStatsCard
+        // Format data for response
         return {
           type: 'player_stats',
           content: {
@@ -110,48 +210,8 @@ async function handleBasketballQuery({ type, player, stat, season = CURRENT_SEAS
   }
 }
 
-// Function to get team's next game
-async function getTeamNextGame(teamName) {
-  try {
-    const games = await rateLimiter.add(() =>
-      nbaApiClient.get('/games', {
-        params: {
-          team: teamName,
-          season: CURRENT_SEASON,
-          status: 'scheduled'
-        }
-      })
-    );
-
-    if (!games || !Array.isArray(games) || games.length === 0) {
-      return {
-        error: true,
-        message: `No upcoming games found for ${teamName}`
-      };
-    }
-
-    const nextGame = games[0]; // Games should be sorted by date
-
-    return {
-      error: false,
-      data: {
-        date: nextGame.date,
-        homeTeam: nextGame.teams.home.name,
-        awayTeam: nextGame.teams.away.name,
-        venue: nextGame.arena.name
-      }
-    };
-  } catch (error) {
-    console.error('Error fetching next game:', error);
-    return {
-      error: true,
-      message: 'Failed to fetch next game information'
-    };
-  }
-}
-
 // Function to format player stats
-function formatPlayerStats(stats) {
+export function formatPlayerStats(stats) {
   if (!stats) return null;
   
   return {
@@ -165,13 +225,4 @@ function formatPlayerStats(stats) {
     tpp: stats.tpp || '0',
     ftp: stats.ftp || '0',
   };
-}
-
-// Export the functions that are used in other files
-export {
-  getPlayerStats,
-  getTeamNextGame,
-  handleBasketballQuery,
-  formatPlayerStats,
-  fetchPlayerStatistics
-}; 
+} 

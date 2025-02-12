@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchBasketballGames } from '@/utils/sportsApi';
+import { fetchBasketballGames } from '@/utils/gamesApi';
 
 export default function Scoreboard() {
   const [games, setGames] = useState([]);
@@ -11,19 +11,25 @@ export default function Scoreboard() {
       setError(null);
       setLoading(true);
       
+      console.log('Fetching basketball games...');
       const basketballGames = await fetchBasketballGames();
+      console.log('Raw games data:', JSON.stringify(basketballGames, null, 2));
       
-      if (!basketballGames || basketballGames.length === 0) {
-        console.log('No upcoming games found');
+      if (!basketballGames || !Array.isArray(basketballGames)) {
+        console.log('Invalid games data received:', basketballGames);
         setGames([]);
       } else {
-        // Filter games for today (current date)
-        const today = new Date();
-        const filteredGames = basketballGames.filter(game => {
-          const gameDate = new Date(game.date);
-          return gameDate.toDateString() === today.toDateString();
+        // Ensure games have all required properties
+        const validGames = basketballGames.filter(game => {
+          const isValid = game && game.id && game.team1 && game.team2;
+          if (!isValid) {
+            console.warn('Invalid game data:', JSON.stringify(game, null, 2));
+          }
+          return isValid;
         });
-        setGames(filteredGames);
+        
+        console.log('Setting valid games:', JSON.stringify(validGames, null, 2));
+        setGames(validGames);
       }
     } catch (err) {
       console.error('Error fetching games:', err);
@@ -57,8 +63,8 @@ export default function Scoreboard() {
         <div className="animate-pulse space-y-4">
           <div className="h-10 bg-gray-800/50 rounded-lg w-full max-w-md mx-auto"></div>
           <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="w-[380px] h-[280px] bg-gray-800/50 rounded-xl flex-shrink-0"></div>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="w-[300px] h-[200px] bg-gray-800/50 rounded-xl flex-shrink-0"></div>
             ))}
           </div>
         </div>
@@ -70,32 +76,35 @@ export default function Scoreboard() {
   if (error) {
     return (
       <div className="w-full max-w-[95vw] mx-auto p-4">
-        <div className="text-red-500 text-center">{error}</div>
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <div className="text-red-400 text-center text-sm">{error}</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-[95vw] mx-auto p-2 space-y-4">
-      {/* Header */}
-      <div className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 text-center">
-        Today's NBA Games
-      </div>
+    <div className="w-full bg-gradient-to-b from-gray-800/50 to-transparent backdrop-blur-sm border-b border-gray-700/30">
+      <div className="w-full max-w-[95vw] mx-auto p-2 space-y-2">
+        {/* Header */}
+     
 
-      {/* Games Display */}
-      <div className="overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
-        <div className="flex gap-2" style={{ paddingBottom: '10px' }}>
-          {games.length === 0 ? (
-            <div className="w-full text-center text-gray-400 py-4">
-              No games scheduled for today
-            </div>
-          ) : (
-            games.map(game => (
-              <div key={game.id} className="snap-center">
-                <GameCard game={game} />
+        {/* Games Display */}
+        <div className="overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
+          <div className="flex gap-2 pb-2">
+            {games.length === 0 ? (
+              <div className="w-full text-center text-gray-400 py-4 px-4 bg-gray-800/20 rounded-lg">
+                <div className="text-sm">No games scheduled for today</div>
+                <div className="text-xs text-gray-500 mt-1">Check back later for upcoming games</div>
               </div>
-            ))
-          )}
+            ) : (
+              games.map(game => (
+                <div key={game.id} className="snap-center">
+                  <GameCard game={game} />
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -122,6 +131,7 @@ function GameCard({ game }) {
 
   // Helper to format quarter scores - more compact version
   const formatQuarterScores = (scores) => {
+    if (!scores) return null;
     return Object.entries(scores)
       .filter(([_, score]) => score > 0)
       .map(([quarter, score]) => (
@@ -134,6 +144,7 @@ function GameCard({ game }) {
 
   // Team logo fallback
   const getTeamInitials = (teamName) => {
+    if (!teamName) return 'TBD';
     return teamName
       .split(' ')
       .map(word => word[0])
@@ -220,7 +231,7 @@ function GameCard({ game }) {
         </div>
       </div>
 
-      {/* Venue - More compact */}
+      {/* Venue */}
       {game.venue && (
         <div className="mt-2 text-[10px] text-gray-500 flex items-center gap-1">
           <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

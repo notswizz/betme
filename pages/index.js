@@ -3,6 +3,7 @@ import Head from 'next/head';
 import ChatContainer from '../components/chat/ChatContainer';
 import LoginForm from '../components/auth/LoginForm';
 import SignupForm from '../components/auth/SignupForm';
+import Scoreboard from '../components/scoreboard/Scoreboard';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -123,7 +124,9 @@ export default function Home() {
         </div>
       ) : (
         <div className="h-[100dvh] overflow-hidden bg-gray-900">
-          <ChatContainer />
+          <div className="flex flex-col h-full">
+            <ChatContainer />
+          </div>
         </div>
       )}
     </>

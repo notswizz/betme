@@ -25,10 +25,10 @@ export default function QuickActions({ onAction }) {
   ];
 
   return (
-    <div className="h-full flex flex-col justify-center -mt-16">
-      <div className="w-full max-w-full overflow-x-hidden">
+    <div className="h-full flex flex-col justify-start">
+      <div className="w-full max-w-full">
         <Scoreboard />
-        <div className="mt-4 grid grid-cols-2 gap-2 max-w-md mx-auto px-4">
+        <div className="mt-8 grid grid-cols-2 gap-2 max-w-md mx-auto px-4">
           {actions.map((action, index) => (
             <button
               key={index}
