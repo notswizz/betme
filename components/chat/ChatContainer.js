@@ -220,6 +220,55 @@ export default function ChatContainer() {
     window.location.reload();
   };
 
+  const handleAcceptBet = async (bet) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch('/api/actions/acceptBet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ betId: bet._id })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to accept bet');
+      }
+
+      // Add success message
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        type: 'text',
+        content: `✅ Bet accepted successfully! You've matched the bet for ${bet.team1} vs ${bet.team2}.`
+      }]);
+
+      // Refresh token balance
+      fetchTokenBalance();
+
+    } catch (error) {
+      console.error('Error accepting bet:', error);
+      setError(error.message);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        type: 'text',
+        content: `❌ ${error.message || 'Failed to accept bet. Please try again.'}`
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex h-[100dvh] bg-gray-900 overflow-hidden">
       <MobileMenuButton 
@@ -241,6 +290,7 @@ export default function ChatContainer() {
         onNewMessage={handleNewMessage}
         onConfirmAction={handleConfirmAction}
         onCancelAction={handleCancelAction}
+        onAcceptBet={handleAcceptBet}
         messagesEndRef={messagesEndRef}
         gameState={currentGameState}
       />

@@ -34,17 +34,45 @@ export function handleBettingIntent(parsedIntent, options = {}, conversationalRe
 }
 
 /**
- * Handles view bets intent
+ * Handles view bets intent with simplified action determination
  */
-export function handleViewBetsIntent(parsedIntent, conversationalResponse = '') {
-  console.log('Handling view bets intent');
+export function handleViewBetsIntent(content = '', conversationalResponse = '') {
+  console.log('Handling view bets intent with content:', content);
+  
+  // Determine the specific type of bets to show based on message content
+  let action = 'view_open_bets'; // default
+  const lowerContent = content.toLowerCase();
+  
+  // First check for specific bet types - these take precedence
+  if (lowerContent.includes('my') || lowerContent.includes('mine')) {
+    action = 'view_my_bets';
+  } else if (lowerContent.includes('accept') || lowerContent.includes('match')) {
+    action = 'view_matched_bets';
+  } else if (lowerContent.includes('open')) {
+    action = 'view_open_bets';
+  } else if (lowerContent.includes('all')) {
+    // Only use 'all' if no other specific type was requested
+    // This prevents 'all' from overriding more specific requests
+    if (!lowerContent.includes('match') && !lowerContent.includes('accept') && 
+        !lowerContent.includes('my') && !lowerContent.includes('mine') &&
+        !lowerContent.includes('open')) {
+      action = 'view_open_bets'; // Default to open bets for 'all'
+    }
+  }
+  
+  console.log('Determined bet view action:', action, 'from content:', lowerContent);
+  
   return {
     message: {
       role: 'assistant',
       type: 'bet_list',
-      action: 'view_bets',
-      content: conversationalResponse || 'Let me show you your current bets.'
+      action: action,
+      content: 'Fetching bets...'
     },
-    intent: parsedIntent
+    intent: {
+      intent: 'view_bets',
+      action: action,
+      confidence: 0.95
+    }
   };
 } 

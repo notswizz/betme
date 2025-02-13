@@ -81,17 +81,38 @@ function handleVeniceResponse(response) {
     
     // Handle view intents with improved type checking
     if (jsonData?.intent && VALID_INTENTS.includes(jsonData.intent)) {
-      if (jsonData.intent === 'view_bets') {
+      if (jsonData.intent === 'view_bets' || jsonData.intent.includes('view_')) {
+        // Determine the specific type of bets to show
+        let action = 'view_open_bets'; // default
+        const lowerContent = textContent.toLowerCase();
+        
+        // First check for specific bet types - these take precedence
+        if (lowerContent.includes('my') || lowerContent.includes('mine')) {
+          action = 'view_my_bets';
+        } else if (lowerContent.includes('accept') || lowerContent.includes('match')) {
+          action = 'view_matched_bets';
+        } else if (lowerContent.includes('open')) {
+          action = 'view_open_bets';
+        } else if (lowerContent.includes('all')) {
+          // Only use 'all' if no other specific type was requested
+          if (!lowerContent.includes('match') && !lowerContent.includes('accept') && 
+              !lowerContent.includes('my') && !lowerContent.includes('mine') &&
+              !lowerContent.includes('open')) {
+            action = 'view_open_bets';
+          }
+        }
+        
         return {
           message: {
             role: 'assistant',
             type: 'bet_list',
-            action: 'view_bets'
+            action: action,
+            content: 'Fetching your bets...'
           },
           intent: {
-            type: 'direct',
-            action: 'view_bets',
-            confidence: jsonData.confidence || 0.9
+            intent: 'view_bets',
+            action: action,
+            confidence: 0.95
           }
         };
       }
@@ -100,13 +121,13 @@ function handleVeniceResponse(response) {
         return {
           message: {
             role: 'assistant',
-            type: jsonData.intent,
+            type: 'bet_list',
+            action: 'view_open_bets',
             content: textContent
           },
           intent: {
-            type: 'direct',
-            action: jsonData.intent,
-            confidence: jsonData.confidence || 0.9
+            intent: 'view_bets',
+            confidence: 0.95
           }
         };
       }
@@ -189,81 +210,156 @@ function calculatePayout(stake, odds) {
   return stake;
 }
 
-// Function to get open bets
-async function getOpenBets(userId) {
+// Function to get all bets and filter based on type
+async function getBets(userId, action = 'view_open_bets') {
   try {
-    const openBets = await Bet.find({
-      userId: { $ne: userId },
-      status: 'pending'
-    })
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .lean();
+    console.log('Getting bets with action:', action, 'for userId:', userId);
+    
+    // Ensure userId is a valid string before converting to ObjectId
+    if (!userId || typeof userId !== 'string') {
+      throw new Error('Invalid userId provided');
+    }
 
-    const formattedBets = openBets.map(bet => ({
-      ...bet,
-      formattedTime: new Date(bet.createdAt).toLocaleString(),
-      payout: bet.payout || calculatePayout(bet.stake, bet.odds).toFixed(2),
-      line: bet.line || '-'
-    }));
+    // Convert string ID to ObjectId
+    const userObjectId = mongoose.Types.ObjectId.isValid(userId) 
+      ? new mongoose.Types.ObjectId(userId)
+      : null;
 
-    return {
-      success: true,
-      message: {
-        role: 'assistant',
-        type: 'open_bets',
-        content: JSON.stringify(formattedBets)
+    if (!userObjectId) {
+      throw new Error('Invalid userId format');
+    }
+
+    // Create base query
+    let query = {};
+    
+    // Build query based on action
+    switch (action) {
+      case 'view_my_bets':
+        query = { 
+          $or: [
+            { userId: userObjectId, status: { $in: ['pending', 'matched'] } },
+            { challengerId: userObjectId, status: 'matched' }
+          ]
+        };
+        break;
+      case 'view_matched_bets':
+        query = {
+          status: 'matched',
+          $or: [
+            { userId: userObjectId },
+            { challengerId: userObjectId }
+          ]
+        };
+        break;
+      default: // view_open_bets
+        // First, let's check all pending bets
+        console.log('Checking all pending bets...');
+        const allPendingBets = await Bet.find({ status: 'pending' }).lean();
+        console.log('All pending bets:', JSON.stringify(allPendingBets, null, 2));
+        
+        // Then use our actual query
+        query = {
+          status: 'pending',
+          userId: { $ne: userObjectId },
+          challengerId: null
+        };
+    }
+
+    console.log('Final query:', JSON.stringify(query, null, 2));
+    
+    try {
+      // Get bets with query and sort by most recent first
+      const bets = await Bet.find(query)
+        .sort({ createdAt: -1 })
+        .populate('userId', 'username')
+        .populate('challengerId', 'username')
+        .lean();
+      
+      console.log('Raw bets from query:', JSON.stringify(bets, null, 2));
+
+      // Format the bets
+      const formattedBets = bets.map(bet => ({
+        _id: bet._id.toString(),
+        userId: bet.userId._id ? bet.userId._id.toString() : bet.userId.toString(),
+        userUsername: bet.userId.username || 'Unknown User',
+        challengerId: bet.challengerId ? (bet.challengerId._id ? bet.challengerId._id.toString() : bet.challengerId.toString()) : null,
+        challengerUsername: bet.challengerId ? (bet.challengerId.username || 'Unknown Challenger') : null,
+        type: bet.type || 'Moneyline',
+        sport: bet.sport || 'NBA',
+        team1: bet.team1,
+        team2: bet.team2,
+        line: bet.line || 'ML',
+        odds: bet.odds,
+        stake: parseFloat(bet.stake).toFixed(2),
+        payout: parseFloat(bet.payout).toFixed(2),
+        status: bet.status,
+        createdAt: new Date(bet.createdAt).toLocaleString(),
+        matchedAt: bet.matchedAt ? new Date(bet.matchedAt).toLocaleString() : null
+      }));
+
+      // Get appropriate message text
+      let messageText;
+      switch (action) {
+        case 'view_my_bets':
+          messageText = formattedBets.length > 0 
+            ? 'Here are your bets:' 
+            : "You haven't placed any bets yet. Would you like to place one?";
+          break;
+        case 'view_matched_bets':
+          messageText = formattedBets.length > 0 
+            ? 'Here are your matched/accepted bets:' 
+            : "You don't have any matched bets yet. Try accepting an open bet or wait for someone to accept yours!";
+          break;
+        default:
+          messageText = formattedBets.length > 0 
+            ? 'Here are the available open bets you can accept:' 
+            : 'No open bets available at the moment. Would you like to create one?';
       }
-    };
+
+      return {
+        success: true,
+        message: {
+          role: 'assistant',
+          type: 'bet_list',
+          content: formattedBets,
+          text: messageText
+        }
+      };
+    } catch (error) {
+      console.error('Error querying bets:', error);
+      // If there's a population error, try without population
+      if (error.message.includes('Cannot populate')) {
+        const bets = await Bet.find(query).sort({ createdAt: -1 }).lean();
+        return {
+          success: true,
+          message: {
+            role: 'assistant',
+            type: 'bet_list',
+            content: bets.map(bet => ({
+              _id: bet._id.toString(),
+              userId: bet.userId.toString(),
+              type: bet.type || 'Moneyline',
+              sport: bet.sport || 'NBA',
+              team1: bet.team1,
+              team2: bet.team2,
+              line: bet.line || 'ML',
+              odds: bet.odds,
+              stake: parseFloat(bet.stake).toFixed(2),
+              payout: parseFloat(bet.payout).toFixed(2),
+              status: bet.status,
+              createdAt: new Date(bet.createdAt).toLocaleString()
+            })),
+            text: 'Here are the bets (note: user details temporarily unavailable)'
+          }
+        };
+      }
+      throw error;
+    }
   } catch (error) {
-    console.error('Error fetching open bets:', error);
+    console.error('Error fetching bets:', error);
     return {
       success: false,
-      error: 'Failed to fetch open bets'
-    };
-  }
-}
-
-// Function to get user bets
-async function getUserBets(userId) {
-  try {
-    const userBets = await Bet.find({
-      userId: userId
-    })
-    .sort({ createdAt: -1 })
-    .limit(20)
-    .lean();
-
-    // Format bets to match the expected structure
-    const formattedBets = userBets.map(bet => ({
-      _id: bet._id.toString(),
-      userId: bet.userId.toString(),
-      type: bet.type,
-      sport: bet.sport,
-      team1: bet.team1,
-      team2: bet.team2,
-      line: bet.line,
-      odds: bet.odds,
-      stake: bet.stake,
-      payout: parseFloat(bet.payout).toFixed(2),
-      status: bet.status,
-      createdAt: bet.createdAt
-    }));
-
-    return {
-      success: true,
-      message: {
-        role: 'assistant',
-        type: 'bet_list',
-        content: formattedBets,
-        timestamp: new Date()
-      }
-    };
-  } catch (error) {
-    console.error('Error fetching user bets:', error);
-    return {
-      success: false,
-      error: 'Failed to fetch your bets'
+      error: error.message || 'Failed to fetch bets'
     };
   }
 }
@@ -444,10 +540,13 @@ export default async function handler(req, res) {
     const { message: responseMessage, intent } = await analyzeConversation(messages);
     console.log('Processed response:', { responseMessage, intent });
 
-    // Handle view bets request
-    if (responseMessage.type === 'bet_list' && responseMessage.action === 'view_bets') {
-      console.log('Handling view bets request');
-      const betsResult = await getUserBets(userId);
+    // Handle view bets request based on AI intent
+    if (responseMessage.type === 'bet_list') {
+      console.log('Handling bet viewing request with action:', responseMessage.action);
+      
+      // Get all bets and filter based on action
+      const betsResult = await getBets(userId, responseMessage.action);
+      
       if (!betsResult.success) {
         return res.status(400).json({ error: betsResult.error });
       }

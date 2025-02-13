@@ -8,6 +8,7 @@ import ImagePreview from '../messages/ImagePreview';
 import PlayerStatsCard from '../messages/PlayerStatsCard';
 import { memo } from 'react';
 import { BetSlipMessage } from './BetSlipMessage';
+import { getCurrentUserId } from '../../utils/auth';
 
 // Memoize the BetSlipMessage wrapper to prevent unnecessary re-renders
 const MemoizedBetSlipWrapper = memo(function BetSlipWrapper({ data, onSubmit }) {
@@ -21,9 +22,10 @@ const MemoizedBetSlipWrapper = memo(function BetSlipWrapper({ data, onSubmit }) 
   );
 });
 
-const ChatMessage = ({ message, onConfirmAction, onImageUpload, gameState }) => {
+const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, gameState }) => {
   const { role, type, content } = message;
   const isUser = role === 'user';
+  const currentUserId = getCurrentUserId();
 
   const renderMessageContent = () => {
     // Handle player stats content specially
@@ -41,7 +43,7 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, gameState }) => 
       case 'bet_list':
         // Parse the content if it's a string
         const bets = typeof content === 'string' ? JSON.parse(content) : content;
-        return <BetListMessage bets={bets} />;
+        return <BetListMessage bets={bets} onAcceptBet={onAcceptBet} currentUserId={currentUserId} />;
       case 'image':
         return <ImagePreview image={content} onUpload={onImageUpload} />;
       case 'betslip':

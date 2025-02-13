@@ -28,6 +28,23 @@ export function getAuthToken() {
   }
 }
 
+export function getCurrentUserId() {
+  try {
+    if (typeof window === 'undefined') return null;
+    const token = getAuthToken();
+    if (!token) return null;
+
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    const payload = JSON.parse(atob(parts[1]));
+    return payload.userId || null;
+  } catch (error) {
+    console.error('Error getting current user ID:', error);
+    return null;
+  }
+}
+
 export function isAuthenticated() {
   try {
     const token = getAuthToken();

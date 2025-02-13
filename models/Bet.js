@@ -1,23 +1,42 @@
 import mongoose from 'mongoose';
 
-const BetSchema = new mongoose.Schema({
+// Delete the model if it exists to force schema recompilation
+if (mongoose.models.Bet) {
+  delete mongoose.models.Bet;
+}
+
+const betSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
+  challengerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   type: {
     type: String,
     required: true,
-    enum: ["Spread", "Moneyline", "Over/Under", "Parlay", "Prop", "Future"]
+    enum: ['Moneyline', 'Spread', 'Over/Under', 'Parlay', 'Prop']
   },
   sport: {
     type: String,
     required: true
   },
-  team1: String,
-  team2: String,
-  line: String,
+  team1: {
+    type: String,
+    required: true
+  },
+  team2: {
+    type: String,
+    required: true
+  },
+  line: {
+    type: String,
+    required: true
+  },
   odds: {
     type: Number,
     required: true
@@ -32,13 +51,25 @@ const BetSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'won', 'lost', 'cancelled'],
+    enum: ['pending', 'matched', 'completed', 'cancelled'],
     default: 'pending'
+  },
+  winner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   },
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  matchedAt: {
+    type: Date,
+    default: null
   }
 });
 
-export default mongoose.models.Bet || mongoose.model('Bet', BetSchema); 
+// Force model compilation with new schema
+const Bet = mongoose.models.Bet || mongoose.model('Bet', betSchema);
+
+export default Bet; 

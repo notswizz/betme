@@ -5,6 +5,8 @@ import { parseAIResponse } from './intentParser';
 import { handleBettingIntent, handleViewBetsIntent } from './betHandler';
 import { handleViewIntent, handleAddTokensIntent } from './viewHandler';
 import { processBetSlipImage } from './betSlipParser';
+import { handleBasketballQuery } from './basketballHandler';
+import { parseIntent } from './intentParser';
 
 /**
  * Analyzes conversation to decide what to do
@@ -36,7 +38,6 @@ export async function analyzeConversation(messages, options = {}) {
         };
       } catch (error) {
         console.error('Failed to process bet slip:', error);
-        // Return specific error message
         return {
           message: {
             role: 'assistant',
@@ -77,15 +78,60 @@ export async function analyzeConversation(messages, options = {}) {
     const { parsedIntent, conversationalResponse } = parseAIResponse(aiResponse);
     console.log('Final parsed response:', { conversationalResponse, parsedIntent });
 
-    // Handle different intents
-    if (parsedIntent?.intent === 'view_bets') {
-      return handleViewBetsIntent(parsedIntent, conversationalResponse);
+    // Handle view bets intent - simplified for consolidated approach
+    if (parsedIntent?.intent === 'view_bets' || 
+        (lastMessage?.content?.toLowerCase().includes('bet') && 
+         (lastMessage?.content?.toLowerCase().includes('view') || 
+          lastMessage?.content?.toLowerCase().includes('show') || 
+          lastMessage?.content?.toLowerCase().includes('see')))) {
+      
+      const content = lastMessage?.content || '';
+      const lowerContent = content.toLowerCase();
+      
+      // First check for specific bet types - these take precedence
+      let action = 'view_open_bets'; // default
+      
+      if (lowerContent.includes('my') || lowerContent.includes('mine')) {
+        action = 'view_my_bets';
+      } else if (lowerContent.includes('accept') || lowerContent.includes('match')) {
+        action = 'view_matched_bets';
+      } else if (lowerContent.includes('open')) {
+        action = 'view_open_bets';
+      } else if (lowerContent.includes('all')) {
+        // Only use 'all' if no other specific type was requested
+        if (!lowerContent.includes('match') && !lowerContent.includes('accept') && 
+            !lowerContent.includes('my') && !lowerContent.includes('mine') &&
+            !lowerContent.includes('open')) {
+          action = 'view_open_bets';
+        }
+      }
+      
+      // If AI detected a specific action, use that instead
+      if (parsedIntent?.intent === 'view_bets' && parsedIntent?.action) {
+        action = parsedIntent.action;
+      }
+      
+      return {
+        message: {
+          role: 'assistant',
+          type: 'bet_list',
+          action: action,
+          content: 'Fetching your bets...'
+        },
+        intent: {
+          intent: 'view_bets',
+          action: action,
+          confidence: 0.95
+        }
+      };
     }
 
+    // Handle betting intent
     if (parsedIntent?.intent === 'betting' || parsedIntent?.type === 'betslip') {
       return handleBettingIntent(parsedIntent, options, conversationalResponse);
     }
 
+    // Handle basketball query intent
     if (parsedIntent?.intent === 'basketball_query') {
       console.log('Detected basketball query');
       try {
@@ -123,12 +169,6 @@ export async function analyzeConversation(messages, options = {}) {
           intent: parsedIntent || { intent: 'chat', confidence: 1.0 }
         };
       }
-    }
-
-    // Handle view intents
-    if (parsedIntent?.intent) {
-      const viewResponse = handleViewIntent(parsedIntent, conversationalResponse);
-      if (viewResponse) return viewResponse;
     }
 
     // Handle add tokens intent
