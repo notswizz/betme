@@ -8,7 +8,6 @@ import ImagePreview from '../messages/ImagePreview';
 import PlayerStatsCard from '../messages/PlayerStatsCard';
 import { memo } from 'react';
 import { BetSlipMessage } from './BetSlipMessage';
-import NaturalBetMessage from './NaturalBetMessage';
 
 // Memoize the BetSlipMessage wrapper to prevent unnecessary re-renders
 const MemoizedBetSlipWrapper = memo(function BetSlipWrapper({ data, onSubmit }) {
@@ -46,9 +45,20 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, gameState }) => 
       case 'image':
         return <ImagePreview image={content} onUpload={onImageUpload} />;
       case 'betslip':
-        return <MemoizedBetSlipWrapper data={content} onSubmit={onConfirmAction} />;
-      case 'natural_bet':
-        return <NaturalBetMessage initialData={content} gameState={gameState} onSubmit={onConfirmAction} />;
+        console.log('Rendering betslip message:', message);
+        return (
+          <div className="space-y-4">
+            {message.text && (
+              <div className="text-white">
+                <RegularMessage content={message.text} message={{ ...message, type: 'text' }} />
+              </div>
+            )}
+            <MemoizedBetSlipWrapper 
+              data={typeof content === 'string' ? JSON.parse(content) : content} 
+              onSubmit={(action) => onConfirmAction({ ...action, requiresConfirmation: true })} 
+            />
+          </div>
+        );
       default:
         return <RegularMessage content={content} message={message} />;
     }

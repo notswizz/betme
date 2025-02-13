@@ -15,7 +15,7 @@ import { findPlayerByName } from '@/services/playerService';
 
 // Constants for validation
 const VALID_INTENTS = ['basketball_query', 'place_bet', 'view_bets', 'view_open_bets', 'chat', 'betting'];
-const VALID_MESSAGE_TYPES = ['text', 'player_stats', 'betslip', 'natural_bet', 'open_bets', 'image', 'bet_success'];
+const VALID_MESSAGE_TYPES = ['text', 'player_stats', 'betslip', 'open_bets', 'image', 'bet_success'];
 
 // Helper function to handle Venice API responses
 function handleVeniceResponse(response) {
@@ -49,7 +49,7 @@ function handleVeniceResponse(response) {
       // If this is a betting intent, preserve the natural_bet type
       if (jsonData.intent === 'betting' || jsonData.type === 'betslip') {
         const betData = {
-          type: 'betslip',
+          type: jsonData.type || 'Moneyline',
           sport: jsonData.sport || 'NBA',
           team1: jsonData.team1 || '',
           team2: jsonData.team2 || '',
@@ -64,6 +64,8 @@ function handleVeniceResponse(response) {
             role: 'assistant',
             type: 'betslip',
             content: betData,
+            text: textContent || "Let's set up your bet. Fill in the details below.",
+            requiresConfirmation: false,
             timestamp: new Date()
           },
           intent: {

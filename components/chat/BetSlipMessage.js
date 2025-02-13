@@ -139,7 +139,6 @@ const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
       onSubmit({
         role: 'assistant',
         type: 'text',
-        requiresConfirmation: true,
         content: `Would you like to place this bet?\n` +
                 `${action.team1} vs ${action.team2}\n` +
                 `${action.type} bet @ ${action.odds}\n` +
@@ -208,123 +207,131 @@ const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
   }
 
   return (
-    <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl p-3 w-full md:max-w-md mx-auto border border-gray-700">
-      <div className="text-sm font-bold text-center mb-3 bg-gradient-to-r from-blue-600 to-blue-400 text-white py-2 rounded-xl flex items-center justify-center gap-2 shadow-lg">
-        🎯 <span className="tracking-wide">PLACE BET</span>
-      </div>
+    <div className="bg-gradient-to-br from-gray-900/95 to-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl p-4 w-full max-w-[95vw] mx-auto border border-gray-700/30 relative overflow-hidden">
+      {/* Decorative elements */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+      <div className="absolute bottom-0 left-0 w-32 h-32 bg-green-500/10 rounded-full blur-3xl -ml-16 -mb-16"></div>
       
-      <form onSubmit={handleSubmit} className="space-y-3">
-        {/* Type, Sport, and Line Row */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="col-span-1">
-            <select
-              value={betSlip.type}
-              onChange={(e) => handleBetTypeChange(e.target.value)}
-              className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            >
-              <option value="">Type</option>
-              {BET_TYPES.map(type => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
+      <div className="relative">
+        <div className="text-sm font-bold text-center mb-4 bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 text-white py-3 rounded-xl flex items-center justify-center gap-3 shadow-xl transform hover:scale-[1.02] hover:from-blue-600 hover:to-blue-800 transition-all duration-200">
+          <span className="text-xl">🎲</span>
+          <span className="tracking-wider uppercase text-base">Bet Slip</span>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Type, Sport, and Line Row */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-1">
+              <select
+                value={betSlip.type}
+                onChange={(e) => handleBetTypeChange(e.target.value)}
+                className="block w-full rounded-xl bg-gray-800/40 border border-gray-700/30 text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200 appearance-none"
+              >
+                <option value="">Type</option>
+                {BET_TYPES.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-1">
+              <select
+                value={betSlip.sport}
+                onChange={(e) => setBetSlip({...betSlip, sport: e.target.value})}
+                className="block w-full rounded-xl bg-gray-800/40 border border-gray-700/30 text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200 appearance-none"
+              >
+                <option value="">Sport</option>
+                {SPORTS.map(sport => (
+                  <option key={sport} value={sport}>{sport}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-1">
+              <input
+                type="text"
+                value={betSlip.type === 'Moneyline' ? 'ML' : betSlip.line}
+                onChange={(e) => setBetSlip({...betSlip, line: e.target.value})}
+                disabled={betSlip.type === 'Moneyline'}
+                placeholder="Line"
+                className={`block w-full rounded-xl bg-gray-800/40 border border-gray-700/30 text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200 ${
+                  betSlip.type === 'Moneyline' ? 'cursor-not-allowed opacity-75' : ''
+                }`}
+              />
+            </div>
           </div>
-          <div className="col-span-1">
-            <select
-              value={betSlip.sport}
-              onChange={(e) => setBetSlip({...betSlip, sport: e.target.value})}
-              className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            >
-              <option value="">Sport</option>
-              {SPORTS.map(sport => (
-                <option key={sport} value={sport}>{sport}</option>
-              ))}
-            </select>
-          </div>
-          <div className="col-span-1">
+
+          {/* Teams Row */}
+          <div className="grid grid-cols-[1fr,auto,1fr] gap-3 items-center">
             <input
               type="text"
-              value={betSlip.type === 'Moneyline' ? 'ML' : betSlip.line}
-              onChange={(e) => setBetSlip({...betSlip, line: e.target.value})}
-              disabled={betSlip.type === 'Moneyline'}
-              placeholder="Line"
-              className={`block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                betSlip.type === 'Moneyline' ? 'cursor-not-allowed opacity-75' : ''
-              }`}
+              value={betSlip.team1}
+              onChange={(e) => setBetSlip({...betSlip, team1: e.target.value})}
+              placeholder="Team 1"
+              className="block w-full rounded-xl bg-gray-800/40 border border-gray-700/30 text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
             />
-          </div>
-        </div>
-
-        {/* Teams Row */}
-        <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
-          <input
-            type="text"
-            value={betSlip.team1}
-            onChange={(e) => setBetSlip({...betSlip, team1: e.target.value})}
-            placeholder="Team 1"
-            className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-          />
-          <span className="text-xs font-bold text-gray-400 bg-gray-900/50 px-2 py-1 rounded-full border border-gray-700/50">
-            VS
-          </span>
-          <input
-            type="text"
-            value={betSlip.team2}
-            onChange={(e) => setBetSlip({...betSlip, team2: e.target.value})}
-            placeholder="Team 2"
-            className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-          />
-        </div>
-
-        {/* Odds, Stake, Payout Row */}
-        <div className="grid grid-cols-3 gap-2">
-          <div className="col-span-1">
+            <span className="text-xs font-bold text-gray-400 bg-gray-900/70 px-3 py-1.5 rounded-full border border-gray-700/30 shadow-inner">
+              VS
+            </span>
             <input
               type="text"
-              value={betSlip.odds}
-              onChange={(e) => setBetSlip({...betSlip, odds: e.target.value})}
-              placeholder="Odds (-110)"
-              className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              value={betSlip.team2}
+              onChange={(e) => setBetSlip({...betSlip, team2: e.target.value})}
+              placeholder="Team 2"
+              className="block w-full rounded-xl bg-gray-800/40 border border-gray-700/30 text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
             />
           </div>
-          <div className="col-span-1">
-            <input
-              type="number"
-              value={betSlip.stake}
-              onChange={(e) => setBetSlip({...betSlip, stake: e.target.value})}
-              placeholder="Stake ($)"
-              className="block w-full rounded-lg bg-gray-800/50 border-gray-700/50 text-white p-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-            />
-          </div>
-          <div className="col-span-1">
-            <input
-              type="text"
-              value={`$${betSlip.payout}`}
-              disabled
-              placeholder="Payout"
-              className="block w-full rounded-lg bg-gray-900/50 border-gray-700/50 text-green-400 p-1.5 text-sm font-medium cursor-not-allowed"
-            />
-          </div>
-        </div>
 
-        {error && (
-          <div className="text-red-400 text-xs text-center">
-            {error}
+          {/* Odds, Stake, Payout Row */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-1">
+              <input
+                type="text"
+                value={betSlip.odds}
+                onChange={(e) => setBetSlip({...betSlip, odds: e.target.value})}
+                placeholder="Odds (-110)"
+                className="block w-full rounded-xl bg-gray-800/40 border border-gray-700/30 text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+              />
+            </div>
+            <div className="col-span-1">
+              <input
+                type="number"
+                value={betSlip.stake}
+                onChange={(e) => setBetSlip({...betSlip, stake: e.target.value})}
+                placeholder="Stake ($)"
+                className="block w-full rounded-xl bg-gray-800/40 border border-gray-700/30 text-white px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+              />
+            </div>
+            <div className="col-span-1">
+              <input
+                type="text"
+                value={`$${betSlip.payout}`}
+                disabled
+                placeholder="Payout"
+                className="block w-full rounded-xl bg-gray-900/70 border border-gray-700/30 text-green-400 px-3 py-2.5 text-sm font-medium cursor-not-allowed shadow-inner"
+              />
+            </div>
           </div>
-        )}
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={`w-full py-2 bg-gradient-to-r ${
-            isSubmitting 
-              ? 'from-gray-500 to-gray-400 cursor-not-allowed'
-              : 'from-green-500 to-green-400 hover:from-green-400 hover:to-green-300'
-          } text-white text-sm rounded-lg transform hover:scale-[1.02] transition-all duration-200 font-medium shadow-lg hover:shadow-xl`}
-        >
-          {isSubmitting ? 'Placing Bet...' : 'Place Bet'}
-        </button>
-      </form>
+          {error && (
+            <div className="text-red-400 text-xs text-center bg-red-500/10 py-2 px-3 rounded-lg border border-red-500/20">
+              {error}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`w-full py-3 bg-gradient-to-r ${
+              isSubmitting 
+                ? 'from-gray-500 to-gray-400 cursor-not-allowed opacity-75'
+                : 'from-green-500 to-green-400 hover:from-green-400 hover:to-green-300 active:scale-[0.98]'
+            } text-white text-sm rounded-xl transform hover:scale-[1.02] transition-all duration-200 font-medium shadow-lg hover:shadow-xl relative overflow-hidden group`}
+          >
+            <div className="absolute inset-0 bg-white/20 group-hover:bg-transparent transition-colors duration-200"></div>
+            {isSubmitting ? 'Placing Bet...' : 'Place Bet'}
+          </button>
+        </form>
+      </div>
     </div>
   );
 });

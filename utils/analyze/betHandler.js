@@ -6,7 +6,7 @@ export function handleBettingIntent(parsedIntent, options = {}, conversationalRe
   
   // Ensure we have all required fields, using gameState as fallback
   const betData = {
-    type: 'betslip',
+    type: parsedIntent.type || 'Moneyline',
     sport: parsedIntent.sport || 'NBA',
     team1: parsedIntent.team1 || (options.gameState && options.gameState.team1) || '',
     team2: parsedIntent.team2 || (options.gameState && options.gameState.team2) || '',
@@ -21,11 +21,15 @@ export function handleBettingIntent(parsedIntent, options = {}, conversationalRe
   return {
     message: {
       role: 'assistant',
-      type: 'natural_bet',
+      type: 'betslip',
       content: betData,
-      text: conversationalResponse || 'I can help you place that bet.'
+      text: conversationalResponse || "Let's set up your bet. Fill in the details below.",
+      requiresConfirmation: false
     },
-    intent: parsedIntent
+    intent: {
+      intent: 'betting',
+      confidence: 0.95
+    }
   };
 }
 

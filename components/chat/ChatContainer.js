@@ -135,13 +135,8 @@ export default function ChatContainer() {
           setLoadingStats(false);
         }
         // For bet slips, replace any existing bet slips
-        else if (newMessage.type === 'betslip' || newMessage.type === 'natural_bet') {
-          setMessages(prev => {
-            const filteredMessages = prev.filter(msg => 
-              msg.type !== 'betslip' && msg.type !== 'natural_bet'
-            );
-            return [...filteredMessages, newMessage];
-          });
+        else if (newMessage.type === 'betslip') {
+          setMessages(prev => [...prev, newMessage]);
         }
         // For bet lists, just add the message
         else if (newMessage.type === 'bet_list') {

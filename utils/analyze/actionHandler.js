@@ -16,8 +16,6 @@ export async function handleAction(action, userId, token = null, gameState = {})
   // Fallback: if action.name is missing
   if (!action.name && action.intent === 'add_tokens') {
     action.name = 'add_tokens';
-  } else if (!action.name && action.type === 'natural_bet') {
-    action.name = 'place_bet';
   } else if (!action.name && action.type === 'betslip') {
     action.name = 'place_bet';
   } else if (!action.name && action.requiresConfirmation) {
