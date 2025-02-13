@@ -12,6 +12,7 @@ export default function ChatContainer() {
   const [error, setError] = useState(null);
   const [conversationId, setConversationId] = useState(null);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  const [currentGameState, setCurrentGameState] = useState(null);
   const messagesEndRef = useRef(null);
   const router = useRouter();
   const [loadingStats, setLoadingStats] = useState(false);
@@ -28,6 +29,7 @@ export default function ChatContainer() {
   const startNewChat = () => {
     setMessages([]);
     setConversationId(null);
+    setCurrentGameState(null);
   };
 
   const handleNewMessage = async (message, type = 'text') => {
@@ -57,7 +59,7 @@ export default function ChatContainer() {
         return;
       }
 
-      // Send message to API
+      // Send message to API with messages array
       const response = await fetch('/api/chat/process', {
         method: 'POST',
         headers: {
@@ -65,9 +67,10 @@ export default function ChatContainer() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          message: userMessage,
+          messages: [userMessage],
           conversationId,
-          type
+          type,
+          gameState: currentGameState
         })
       });
 
@@ -106,15 +109,26 @@ export default function ChatContainer() {
           setLoadingStats(false);
         }
         // For bet slips, replace any existing bet slips
-        else if (newMessage.type === 'betslip') {
+        else if (newMessage.type === 'betslip' || newMessage.type === 'natural_bet') {
           setMessages(prev => {
-            const filteredMessages = prev.filter(msg => msg.type !== 'betslip');
+            const filteredMessages = prev.filter(msg => 
+              msg.type !== 'betslip' && msg.type !== 'natural_bet'
+            );
             return [...filteredMessages, newMessage];
           });
         }
-        // For all other messages, add if they have content
-        else if (newMessage.content?.trim()) {
+        // For bet lists, just add the message
+        else if (newMessage.type === 'bet_list') {
           setMessages(prev => [...prev, newMessage]);
+        }
+        // For all other messages, add if they have content
+        else if (typeof newMessage.content === 'string' ? newMessage.content.trim() : newMessage.content) {
+          setMessages(prev => [...prev, newMessage]);
+        }
+
+        // Update current game state if provided
+        if (newMessage.gameState) {
+          setCurrentGameState(newMessage.gameState);
         }
       }
 
@@ -146,7 +160,8 @@ export default function ChatContainer() {
         },
         body: JSON.stringify({
           confirmAction: action,
-          conversationId
+          conversationId,
+          gameState: currentGameState
         })
       });
 
@@ -210,6 +225,7 @@ export default function ChatContainer() {
         onConfirmAction={handleConfirmAction}
         onCancelAction={handleCancelAction}
         messagesEndRef={messagesEndRef}
+        gameState={currentGameState}
       />
     </div>
   );

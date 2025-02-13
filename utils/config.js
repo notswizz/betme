@@ -8,16 +8,17 @@ export const NBA_API_HOST = 'api-nba-v1.p.rapidapi.com';
 
 // Cache Configuration
 export const CACHE_CONFIG = {
-  DEFAULT_DURATION: 300000,    // 5 minutes
-  STATS_DURATION: 3600000,     // 1 hour for player stats
-  GAMES_DURATION: 300000       // 5 minutes for games
+  DEFAULT_DURATION: 60000, // 1 minute
+  LONG_DURATION: 300000,  // 5 minutes
+  SHORT_DURATION: 30000   // 30 seconds
 };
 
-// Season Configuration
-export const getCurrentSeason = () => {
-  // Current NBA season is 2024-25
-  return '2024';  // Hardcode for now since we're in the 2024-25 season
-};
+// Get current NBA season
+export function getCurrentSeason() {
+  // For the NBA API, we use just the starting year of the season
+  // So for 2024-2025 season, we return '2024'
+  return '2024';
+}
 
 // Debug logging for season
 console.log('Current NBA Season:', getCurrentSeason());

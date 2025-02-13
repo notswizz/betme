@@ -36,6 +36,52 @@ const BASKETBALL_QUERY_TYPES = {
 };
 
 export async function generateAIResponse(messages) {
+  // Ensure messages is an array and has content
+  if (!Array.isArray(messages)) {
+    messages = [];
+  }
+
+  // Format messages to ensure they are valid
+  const formattedMessages = messages.map(msg => ({
+    role: msg.role || 'user',
+    content: typeof msg.content === 'object' ? JSON.stringify(msg.content) : (msg.content || '')
+  }));
+
+  const systemMessage = {
+    role: "system",
+    content: `You are a sports betting assistant. Your primary job is to detect user intents and return properly formatted responses.
+
+IMPORTANT INTENTS:
+
+1. VIEW BETS - When user wants to see their bets
+Examples:
+- "show my bets"
+- "view bets"
+- "list bets"
+Response: {"intent": "view_bets"}
+
+2. PLACE BET - When user wants to place a bet
+Examples:
+- "bet 100 on Lakers"
+- "hawks -5.5"
+- "over 220.5 in the knicks game"
+Response: {"intent": "betting", "type": "betslip", "sport": "NBA", "team1": "Lakers", "team2": "Opponent", "line": "ML", "odds": "-110", "stake": 100, "payout": 190.91}
+
+3. BASKETBALL QUERY - When user asks about stats
+Examples:
+- "How many points is LeBron averaging?"
+Response: {"intent": "player_stats", "player": "LeBron James", "stat": "points", "season": "2024"}
+
+RULES:
+1. For ANY request, return ONLY the JSON object - no additional text
+2. For bet requests, include intent: "betting" and type: "betslip"
+3. For view requests, return ONLY {"intent": "view_bets"}
+4. Default stake to 100 if not specified
+5. Default odds to -110 if not specified
+6. For moneyline bets, use line: "ML"
+7. For over/under bets, prefix line with "o" or "u" (e.g. "o220.5")`
+  };
+
   const options = {
     method: 'POST',
     headers: {
@@ -44,29 +90,7 @@ export async function generateAIResponse(messages) {
     },
     body: JSON.stringify({
       model: "llama-3.3-70b",
-      messages: [
-        {
-          role: "system",
-          content: `You are a friendly and helpful sports assistant. When users ask for NBA statistics or information, provide a conversational response and include a JSON object with the intent and parameters matching our API.
-
-Examples:
-
-User: "How many points is LeBron averaging this season?"
-Assistant: LeBron James is currently averaging 25.8 points per game this season.
-{"intent": "player_stats", "player": "LeBron James", "stat": "points", "season": "2024"}
-
-User: "Show me Trae Young's stats"
-Assistant: Let me fetch Trae Young's statistics for you.
-{"intent": "player_stats", "player": "Trae Young", "stat": "all", "season": "2024"}
-
-IMPORTANT RULES:
-1. Always respond conversationally first.
-2. Include a JSON object with the intent and parameters.
-3. Always include season (current year) for player_stats queries.
-4. Keep responses friendly and helpful.`
-        },
-        ...messages
-      ],
+      messages: [systemMessage, ...formattedMessages],
       temperature: 0.1,
       max_tokens: 500
     })

@@ -6,7 +6,7 @@ const SPORTS = [
 ];
 
 const BET_TYPES = [
-  "Spread", "Moneyline", "Over/Under", "Parlay", "Prop", "Future"
+  "Moneyline", "Spread", "Total", "Parlay", "Prop", "Future"
 ];
 
 const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
@@ -29,7 +29,14 @@ const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
   const calculatePayout = useCallback((stake, odds) => {
     if (!stake || !odds) return 0;
     const numStake = parseFloat(stake);
-    const numOdds = parseInt(odds.replace(/[^-\d]/g, ''));
+    
+    // Handle odds whether it's a string or number
+    let numOdds;
+    if (typeof odds === 'string') {
+      numOdds = parseInt(odds.replace(/[^-\d]/g, ''));
+    } else {
+      numOdds = parseInt(odds);
+    }
     
     if (isNaN(numStake) || isNaN(numOdds)) return 0;
     
@@ -76,33 +83,43 @@ const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
       return;
     }
 
-    // Ensure line is set for Moneyline bets
-    const submissionData = {
-      ...betSlip,
-      line: betSlip.type === 'Moneyline' ? 'ML' : betSlip.line
+    if (!betSlip.stake || parseFloat(betSlip.stake) <= 0) {
+      setError('Valid stake amount is required');
+      return;
+    }
+
+    // Create the action object with all required fields
+    const action = {
+      name: 'place_bet',
+      type: betSlip.type === 'Spread' ? 'Spread' : 
+            betSlip.type === 'Moneyline' ? 'Moneyline' :
+            betSlip.type === 'Over/Under' ? 'Total' :
+            'Moneyline',
+      sport: betSlip.sport || 'NBA',
+      team1: betSlip.team1.trim(),
+      team2: betSlip.team2.trim(),
+      line: betSlip.type === 'Moneyline' ? 'ML' : (betSlip.line || '0'),
+      odds: betSlip.odds.trim(),
+      stake: parseFloat(betSlip.stake),
+      payout: parseFloat(betSlip.payout),
+      pick: (betSlip.pick || betSlip.team1).trim()
     };
 
     setIsSubmitting(true);
     
     try {
-      const confirmationMessage = {
+      onSubmit({
         role: 'assistant',
         type: 'text',
         requiresConfirmation: true,
         content: `Would you like to place this bet?\n` +
-                `${submissionData.team1} vs ${submissionData.team2}\n` +
-                `${submissionData.type} bet @ ${submissionData.odds}\n` +
-                `Line: ${submissionData.line}\n` +
-                `Stake: $${submissionData.stake}\n` +
-                `Potential Payout: $${submissionData.payout}`,
-        action: {
-          name: 'place_bet',
-          ...submissionData,
-          status: 'pending'
-        }
-      };
-
-      onSubmit(confirmationMessage);
+                `${action.team1} vs ${action.team2}\n` +
+                `${action.type} bet @ ${action.odds}\n` +
+                `Line: ${action.line}\n` +
+                `Stake: $${action.stake}\n` +
+                `Potential Payout: $${action.payout}`,
+        action
+      });
       setIsSubmitted(true);
     } catch (err) {
       console.error('Error submitting bet:', err);

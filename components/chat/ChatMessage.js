@@ -3,11 +3,12 @@ import MessageAvatar from '../messages/MessageAvatar';
 import RegularMessage from '../messages/RegularMessage';
 import BetConfirmation from '../messages/BetConfirmation';
 import BetSuccessMessage from '../messages/BetSuccessMessage';
-import OpenBetsView from '../messages/OpenBetsView';
+import BetListMessage from '../messages/BetListMessage';
 import ImagePreview from '../messages/ImagePreview';
 import PlayerStatsCard from '../messages/PlayerStatsCard';
 import { memo } from 'react';
 import { BetSlipMessage } from './BetSlipMessage';
+import NaturalBetMessage from './NaturalBetMessage';
 
 // Memoize the BetSlipMessage wrapper to prevent unnecessary re-renders
 const MemoizedBetSlipWrapper = memo(function BetSlipWrapper({ data, onSubmit }) {
@@ -21,7 +22,7 @@ const MemoizedBetSlipWrapper = memo(function BetSlipWrapper({ data, onSubmit }) 
   );
 });
 
-const ChatMessage = ({ message, onBetConfirm, onImageUpload }) => {
+const ChatMessage = ({ message, onConfirmAction, onImageUpload, gameState }) => {
   const { role, type, content } = message;
   const isUser = role === 'user';
 
@@ -35,15 +36,19 @@ const ChatMessage = ({ message, onBetConfirm, onImageUpload }) => {
       case 'text':
         return <RegularMessage content={content} message={message} />;
       case 'bet_confirmation':
-        return <BetConfirmation bet={content} onConfirm={onBetConfirm} />;
+        return <BetConfirmation bet={content} onConfirm={onConfirmAction} />;
       case 'bet_success':
         return <BetSuccessMessage bet={content} />;
-      case 'open_bets':
-        return <OpenBetsView bets={content} />;
+      case 'bet_list':
+        // Parse the content if it's a string
+        const bets = typeof content === 'string' ? JSON.parse(content) : content;
+        return <BetListMessage bets={bets} />;
       case 'image':
         return <ImagePreview image={content} onUpload={onImageUpload} />;
       case 'betslip':
-        return handleBetSlip(content);
+        return <MemoizedBetSlipWrapper data={content} onSubmit={onConfirmAction} />;
+      case 'natural_bet':
+        return <NaturalBetMessage initialData={content} gameState={gameState} onSubmit={onConfirmAction} />;
       default:
         return <RegularMessage content={content} message={message} />;
     }

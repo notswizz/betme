@@ -115,6 +115,7 @@ export default function Scoreboard() {
 function GameCard({ game }) {
   const [team1LogoError, setTeam1LogoError] = useState(false);
   const [team2LogoError, setTeam2LogoError] = useState(false);
+  const [showBetForm, setShowBetForm] = useState(false);
 
   const getGameDateTime = (date) => {
     const gameDate = new Date(date);
@@ -242,17 +243,211 @@ function GameCard({ game }) {
         </div>
       )}
 
-      {/* Action Buttons - More compact and mobile-friendly */}
+      {/* Action Buttons - Enhanced with betting form */}
       <div className="flex gap-2 mt-2 pt-2 border-t border-gray-700/30">
-        <button className="flex-1 flex items-center justify-center gap-1 p-1.5 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 hover:from-blue-500/30 hover:to-blue-600/30 transition-all duration-300 group/btn">
+        <button 
+          onClick={() => setShowBetForm(true)}
+          className="flex-1 flex items-center justify-center gap-1 p-1.5 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-600/20 hover:from-blue-500/30 hover:to-blue-600/30 transition-all duration-300 group/btn"
+        >
           <span className="text-sm transform group-hover/btn:scale-110 transition-transform">🎯</span>
-          <span className="text-[10px] font-medium text-blue-400 group-hover/btn:text-blue-300">Bet</span>
+          <span className="text-[10px] font-medium text-blue-400 group-hover/btn:text-blue-300">Place Bet</span>
         </button>
 
         <button className="flex-1 flex items-center justify-center gap-1 p-1.5 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-600/20 hover:from-indigo-500/30 hover:to-purple-600/30 transition-all duration-300 group/btn">
           <span className="text-sm transform group-hover/btn:scale-110 transition-transform">📊</span>
-          <span className="text-[10px] font-medium text-indigo-400 group-hover/btn:text-indigo-300">Analyze</span>
+          <span className="text-[10px] font-medium text-indigo-400 group-hover/btn:text-indigo-300">Details</span>
         </button>
+      </div>
+
+      {/* Betting Form Modal */}
+      {showBetForm && (
+        <BetForm 
+          game={game} 
+          onClose={() => setShowBetForm(false)} 
+        />
+      )}
+    </div>
+  );
+}
+
+// New BetForm Component
+function BetForm({ game, onClose }) {
+  const [betAmount, setBetAmount] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [aiConfirmation, setAiConfirmation] = useState(null);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      // Get AI confirmation
+      const response = await fetch('/api/bet/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          gameId: game.id,
+          selectedTeam,
+          betAmount: Number(betAmount),
+          gameState: {
+            team1: game.team1,
+            team2: game.team2,
+            status: game.status,
+          },
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to analyze bet');
+      }
+
+      setAiConfirmation(data.analysis);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmBet = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/bet/place', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          gameId: game.id,
+          selectedTeam,
+          betAmount: Number(betAmount),
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to place bet');
+      }
+
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 w-full max-w-md mx-4 border border-gray-700/50">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-white">Place Bet</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Team Selection */}
+          <div className="space-y-2">
+            <label className="text-sm text-gray-300">Select Team</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedTeam(game.team1.name)}
+                className={`p-2 rounded-lg border ${
+                  selectedTeam === game.team1.name
+                    ? 'border-blue-500 bg-blue-500/20'
+                    : 'border-gray-700 bg-gray-800/50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <img src={game.team1.logo} alt={game.team1.name} className="w-6 h-6" />
+                  <span className="text-sm text-white">{game.team1.name}</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedTeam(game.team2.name)}
+                className={`p-2 rounded-lg border ${
+                  selectedTeam === game.team2.name
+                    ? 'border-blue-500 bg-blue-500/20'
+                    : 'border-gray-700 bg-gray-800/50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <img src={game.team2.logo} alt={game.team2.name} className="w-6 h-6" />
+                  <span className="text-sm text-white">{game.team2.name}</span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Bet Amount */}
+          <div className="space-y-2">
+            <label className="text-sm text-gray-300">Bet Amount (Tokens)</label>
+            <input
+              type="number"
+              value={betAmount}
+              onChange={(e) => setBetAmount(e.target.value)}
+              className="w-full px-3 py-2 bg-gray-800/50 border border-gray-700 rounded-lg text-white placeholder-gray-500"
+              placeholder="Enter amount"
+              min="1"
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg p-2">
+              {error}
+            </div>
+          )}
+
+          {/* AI Analysis */}
+          {aiConfirmation && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 space-y-2">
+              <h4 className="text-sm font-medium text-blue-400">AI Analysis</h4>
+              <p className="text-sm text-gray-300">{aiConfirmation}</p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            {!aiConfirmation ? (
+              <button
+                type="submit"
+                disabled={loading || !selectedTeam || !betAmount}
+                className="flex-1 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium text-sm disabled:opacity-50"
+              >
+                {loading ? 'Analyzing...' : 'Analyze Bet'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleConfirmBet}
+                disabled={loading}
+                className="flex-1 py-2 rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white font-medium text-sm disabled:opacity-50"
+              >
+                {loading ? 'Placing Bet...' : 'Confirm Bet'}
+              </button>
+            )}
+          </div>
+        </form>
       </div>
     </div>
   );

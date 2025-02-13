@@ -1,6 +1,20 @@
 import MessageAvatar from './MessageAvatar';
 
-export default function BetSuccessMessage({ betData }) {
+export default function BetSuccessMessage({ bet, message }) {
+  // Extract bet data from either bet prop or message content
+  const betData = bet || message?.content;
+
+  if (!betData) {
+    return (
+      <div className="text-red-400">Error: Invalid bet data</div>
+    );
+  }
+
+  // Ensure numeric values are properly formatted
+  const stake = parseFloat(betData.stake).toFixed(2);
+  const payout = parseFloat(betData.payout).toFixed(2);
+  const id = betData.id || betData._id;
+
   return (
     <div className="mb-3">
       <div className={`flex justify-start items-start space-x-3`}>
@@ -63,20 +77,22 @@ export default function BetSuccessMessage({ betData }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-xs text-gray-500">Your Stake</div>
-                  <div className="text-base font-semibold text-white">${parseFloat(betData.stake).toFixed(2)}</div>
+                  <div className="text-base font-semibold text-white">${stake}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Potential Payout</div>
-                  <div className="text-base font-semibold text-green-400">${betData.payout}</div>
+                  <div className="text-base font-semibold text-green-400">${payout}</div>
                 </div>
               </div>
             </div>
 
             {/* Bet ID */}
-            <div className="bg-gray-900/50 rounded-xl p-2 border border-gray-800">
-              <div className="text-xs text-gray-500">Bet ID</div>
-              <div className="font-mono text-xs text-gray-400 truncate">{betData._id}</div>
-            </div>
+            {id && (
+              <div className="bg-gray-900/50 rounded-xl p-2 border border-gray-800">
+                <div className="text-xs text-gray-500">Bet ID</div>
+                <div className="font-mono text-xs text-gray-400 truncate">{id}</div>
+              </div>
+            )}
           </div>
         </div>
       </div>

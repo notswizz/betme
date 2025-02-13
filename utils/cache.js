@@ -3,36 +3,52 @@ import { CACHE_CONFIG } from './config';
 class Cache {
   constructor() {
     this.cache = new Map();
-    this.setupCleanup();
+    this.timeouts = new Map();
   }
 
   // Get item from cache
   get(key) {
-    const item = this.cache.get(key);
-    if (!item) return null;
-
-    const now = Date.now();
-    if (now > item.expiry) {
-      this.delete(key);
-      return null;
-    }
-
-    return item.value;
+    return this.cache.get(key);
   }
 
   // Set item in cache with expiration
-  set(key, value, duration = CACHE_CONFIG.DEFAULT_DURATION) {
-    const expiry = Date.now() + duration;
-    this.cache.set(key, { value, expiry });
+  set(key, value, ttlSeconds) {
+    // Clear any existing timeout for this key
+    if (this.timeouts.has(key)) {
+      clearTimeout(this.timeouts.get(key));
+    }
+
+    // Set the value in cache
+    this.cache.set(key, value);
+
+    // Set expiration timeout
+    if (ttlSeconds) {
+      const timeout = setTimeout(() => {
+        this.cache.delete(key);
+        this.timeouts.delete(key);
+      }, ttlSeconds * 1000);
+
+      this.timeouts.set(key, timeout);
+    }
   }
 
   // Delete item from cache
   delete(key) {
-    this.cache.delete(key);
+    // Clear timeout if exists
+    if (this.timeouts.has(key)) {
+      clearTimeout(this.timeouts.get(key));
+      this.timeouts.delete(key);
+    }
+    return this.cache.delete(key);
   }
 
   // Clear entire cache
   clear() {
+    // Clear all timeouts
+    for (const timeout of this.timeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.timeouts.clear();
     this.cache.clear();
   }
 
@@ -41,26 +57,16 @@ class Cache {
     return this.cache.size;
   }
 
-  // Clean up expired items
-  cleanup() {
-    const now = Date.now();
-    for (const [key, item] of this.cache.entries()) {
-      if (now > item.expiry) {
-        this.delete(key);
-      }
-    }
+  // Check if item exists in cache
+  has(key) {
+    return this.cache.has(key);
   }
 
-  // Setup automatic cleanup
-  setupCleanup() {
-    // Run cleanup every minute
-    setInterval(() => {
-      console.log('Running cache cleanup...');
-      this.cleanup();
-      console.log(`Cache size after cleanup: ${this.size()} items`);
-    }, 60000);
+  // Get all keys in cache
+  keys() {
+    return Array.from(this.cache.keys());
   }
 }
 
-// Export singleton instance
-export default new Cache(); 
+// Export a singleton instance
+export const cache = new Cache(); 

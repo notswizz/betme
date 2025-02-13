@@ -13,97 +13,92 @@ import mongoose from 'mongoose';
 import { getPlayerStats, getTeamNextGame, handleBasketballQuery, fetchPlayerStatistics } from '@/utils/nbaApi';
 import { findPlayerByName } from '@/services/playerService';
 
+// Constants for validation
+const VALID_INTENTS = ['basketball_query', 'place_bet', 'view_bets', 'view_open_bets', 'chat', 'betting'];
+const VALID_MESSAGE_TYPES = ['text', 'player_stats', 'betslip', 'natural_bet', 'open_bets', 'image', 'bet_success'];
+
 // Helper function to handle Venice API responses
 function handleVeniceResponse(response) {
   // Debug logging
-  console.log('Handling Venice response:', JSON.stringify(response, null, 2));
-
-  let content;
-  let intent = { intent: 'chat', confidence: 1.0 };
+  console.log('Venice API Response:', response);
   
-  // Handle both direct response format and choices format
-  if (response.content) {
-    content = response.content;
-  } else if (response?.choices?.[0]?.message?.content) {
-    content = response.choices[0].message.content;
-  } else {
-    throw new Error('Invalid response format from Venice API');
-  }
-
-  // Try to extract JSON using a more robust method
-  const jsonMatch = content.match(/\{(?:[^{}]|(\{[^{}]*\}))*\}$/);
-  if (!jsonMatch) {
+  const { content, role } = response;
+  
+  // If no content, return empty response
+  if (!content) {
     return {
       message: {
         role: 'assistant',
         type: 'text',
-        content: content.trim()
+        content: ''
       },
-      intent
+      intent: { intent: 'chat', confidence: 1.0 }
     };
   }
 
-  try {
-    const jsonStr = jsonMatch[0];
-    const textContent = content.slice(0, content.lastIndexOf(jsonStr)).trim();
-    const jsonData = JSON.parse(jsonStr);
-    
-    // Validate JSON structure
-    if (!isValidIntentFormat(jsonData)) {
-      console.warn('Invalid intent format:', jsonData);
-      return {
-        message: {
-          role: 'assistant',
-          type: 'text',
-          content: content.trim()
-        },
-        intent
-      };
-    }
+  // Try to extract JSON from content
+  let jsonData;
+  let textContent = content;
+  const jsonMatch = content.match(/\{.*\}/s);
 
-    // Handle basketball queries with improved structure
-    if (jsonData.intent === 'player_stats') {
-      console.log('Processing player stats query:', jsonData);
-      return {
-        message: {
-          role: 'assistant',
-          type: 'player_stats',
-          content: {
-            query: {
-              player: jsonData.player,
-              stat: jsonData.stat,
-              season: jsonData.season
-            },
-            response: textContent
-          }
-        },
-        intent: jsonData
-      };
-    }
-    
-    // Handle betting intents with validation
-    if (jsonData.type === 'betting' && jsonData.sport) {
-      const betSlip = validateAndFormatBetSlip(jsonData);
-      return {
-        message: {
-          role: 'assistant',
+  try {
+    if (jsonMatch) {
+      jsonData = JSON.parse(jsonMatch[0]);
+      console.log('Parsed JSON data:', jsonData);
+      
+      // If this is a betting intent, preserve the natural_bet type
+      if (jsonData.intent === 'betting' || jsonData.type === 'betslip') {
+        const betData = {
           type: 'betslip',
-          content: JSON.stringify(betSlip)
-        },
-        intent: { 
-          intent: 'place_bet', 
-          confidence: jsonData.confidence || 0.9 
-        }
-      };
+          sport: jsonData.sport || 'NBA',
+          team1: jsonData.team1 || '',
+          team2: jsonData.team2 || '',
+          line: jsonData.line || 'ML',
+          odds: jsonData.odds || -110,
+          stake: parseFloat(jsonData.stake) || 100,
+          payout: parseFloat(jsonData.payout) || 190.91
+        };
+
+        return {
+          message: {
+            role: 'assistant',
+            type: 'betslip',
+            content: betData,
+            timestamp: new Date()
+          },
+          intent: {
+            intent: 'betting',
+            confidence: jsonData.confidence || 0.9
+          }
+        };
+      }
+      
+      // Remove the JSON from the text content if it exists
+      textContent = content.replace(jsonMatch[0], '').trim();
     }
     
     // Handle view intents with improved type checking
-    if (jsonData.intent && VALID_INTENTS.includes(jsonData.intent)) {
+    if (jsonData?.intent && VALID_INTENTS.includes(jsonData.intent)) {
+      if (jsonData.intent === 'view_bets') {
+        return {
+          message: {
+            role: 'assistant',
+            type: 'bet_list',
+            action: 'view_bets'
+          },
+          intent: {
+            type: 'direct',
+            action: 'view_bets',
+            confidence: jsonData.confidence || 0.9
+          }
+        };
+      }
+      
       if (isViewIntent(jsonData.intent)) {
         return {
           message: {
             role: 'assistant',
-            type: 'text',
+            type: jsonData.intent,
             content: textContent
           },
           intent: {
@@ -152,10 +147,6 @@ function handleVeniceResponse(response) {
     };
   }
 }
-
-// Constants for validation
-const VALID_INTENTS = ['basketball_query', 'place_bet', 'view_bets', 'view_open_bets', 'chat'];
-const VALID_MESSAGE_TYPES = ['text', 'player_stats', 'betslip', 'open_bets', 'image', 'bet_success'];
 
 // Helper functions for validation
 function isValidIntentFormat(data) {
@@ -241,19 +232,29 @@ async function getUserBets(userId) {
     .limit(20)
     .lean();
 
+    // Format bets to match the expected structure
     const formattedBets = userBets.map(bet => ({
-      ...bet,
-      formattedTime: new Date(bet.createdAt).toLocaleString(),
-      payout: bet.payout || calculatePayout(bet.stake, bet.odds).toFixed(2),
-      line: bet.line || '-'
+      _id: bet._id.toString(),
+      userId: bet.userId.toString(),
+      type: bet.type,
+      sport: bet.sport,
+      team1: bet.team1,
+      team2: bet.team2,
+      line: bet.line,
+      odds: bet.odds,
+      stake: bet.stake,
+      payout: parseFloat(bet.payout).toFixed(2),
+      status: bet.status,
+      createdAt: bet.createdAt
     }));
 
     return {
       success: true,
       message: {
         role: 'assistant',
-        type: 'open_bets',
-        content: JSON.stringify(formattedBets)
+        type: 'bet_list',
+        content: formattedBets,
+        timestamp: new Date()
       }
     };
   } catch (error) {
@@ -280,195 +281,165 @@ const formatStatValue = (stat, value) => {
   }
 };
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
-  // Debug logging
-  console.log('Request body:', req.body);
-  console.log('Message type:', typeof req.body.message);
-  console.log('Message content:', req.body.message);
-
+// Function to handle bet confirmation
+async function handleBetConfirmation(userId, betData) {
   try {
-    await connectDB();
+    console.log('Handling bet confirmation:', { userId, betData });
+
+    // Extract bet data from the action object
+    const bet = betData.action;
+    if (!bet) {
+      throw new Error('No bet data provided');
+    }
+
+    // Validate bet data
+    const requiredFields = ['stake', 'odds', 'team1', 'team2'];
+    const missingFields = requiredFields.filter(field => !bet[field]);
     
-    // Verify auth token
-    const authHeader = req.headers.authorization;
-    if (!authHeader || typeof authHeader !== 'string') {
-      return res.status(401).json({ message: 'Missing authorization header' });
+    if (missingFields.length > 0) {
+      console.error('Missing required fields:', missingFields);
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-    if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
-    }
-
-    const userId = await verifyToken(token);
-    if (!userId) {
-      return res.status(401).json({ message: 'Invalid token' });
-    }
-
-    const { message, conversationId, confirmAction, type } = req.body;
-
-    // More detailed validation with error messages
-    if (!confirmAction) {
-      if (!message) {
-        return res.status(400).json({ error: 'Message is required' });
-      }
-      if (typeof message === 'object') {
-        if (!message.content) {
-          return res.status(400).json({ error: 'Message content is required' });
-        }
-        if (!message.type) {
-          return res.status(400).json({ error: 'Message type is required' });
-        }
-        if (!message.role) {
-          return res.status(400).json({ error: 'Message role is required' });
-        }
-      }
-    }
-
-    // Find user
+    // Get user
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      console.error('User not found:', userId);
+      throw new Error('User not found');
     }
 
-    // Check token balance
-    if (user.tokenBalance < 1) {
-      return res.status(400).json({ error: 'Insufficient tokens' });
+    // Check if user has enough tokens
+    const stake = parseFloat(bet.stake);
+    console.log('Checking balance:', { userTokens: user.tokenBalance, requiredStake: stake });
+    
+    if (user.tokenBalance < stake) {
+      throw new Error(`Insufficient tokens. Required: ${stake}, Available: ${user.tokenBalance}`);
+    }
+
+    // Create new bet
+    const newBet = new Bet({
+      userId,
+      type: bet.type === 'betslip' ? 'Moneyline' : bet.type || 'Moneyline',
+      sport: bet.sport || 'NBA',
+      team1: bet.team1,
+      team2: bet.team2,
+      line: bet.line || 'ML',
+      odds: bet.odds,
+      stake: stake,
+      payout: bet.payout || calculatePayout(stake, bet.odds),
+      status: 'pending',
+      pick: bet.pick || bet.team1
+    });
+
+    console.log('Created bet:', newBet);
+
+    // Save bet
+    await newBet.save();
+
+    // Update user token balance
+    user.tokenBalance -= stake;
+    await user.save();
+
+    console.log('Updated user balance:', user.tokenBalance);
+
+    // Return success without a message
+    return {
+      success: true
+    };
+  } catch (error) {
+    console.error('Error confirming bet:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to place bet'
+    };
+  }
+}
+
+// Main API route handler
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    // Connect to database
+    await connectDB();
+
+    // Get user ID from token
+    const token = req.headers.authorization?.split(' ')[1];
+    const userId = await verifyToken(token);
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Get conversation ID and messages from request
+    const { messages, conversationId } = req.body;
+    
+    // Validate messages
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Invalid messages format' });
     }
 
     // Get or create conversation
-    let conversation = conversationId 
-      ? await Conversation.findById(conversationId)
-      : new Conversation({ messages: [], userId: userId });
-    
-    if (!conversation) {
-      conversation = new Conversation({ messages: [], userId: userId });
-    }
-
-    if (!conversation._id) {
-      await conversation.save();
-    }
-
-    // Add user message to conversation
-    const userMessage = {
-      role: 'user',
-      content: typeof message === 'object' ? 
-        typeof message.content === 'object' ? 
-          JSON.stringify(message.content) : 
-          message.content : 
-        message,
-      type: message.type || 'text'
-    };
-    
-    conversation.messages.push(userMessage);
-
-    try {
-      // Get AI response
-      console.log('Getting AI response for messages:', conversation.messages);
-      const aiResponse = await generateAIResponse([...conversation.messages]);
-      console.log('AI Response:', JSON.stringify(aiResponse, null, 2));
-
-      // Handle the Venice response
-      const { message: responseMessage, intent } = handleVeniceResponse(aiResponse);
-      console.log('Processed response:', { message: responseMessage, intent });
-
-      // Consolidate player stats handling
-      if (intent.intent === 'player_stats' || intent.intent === 'basketball_query') {
-        console.log('=== DEBUG: Processing Player Stats Query ===');
-        console.log('Intent:', intent);
-        try {
-          const result = await handleBasketballQuery({
-            type: 'player_stats',
-            player: intent.player,
-            stat: intent.stat,
-            season: intent.season
-          });
-          console.log('Basketball query result:', result);
-
-          if (result.type === 'text') {
-            return res.status(200).json({
-              message: {
-                role: 'assistant',
-                type: 'text',
-                content: result.content
-              },
-              conversationId: conversation._id.toString()
-            });
-          }
-
-          // Return properly formatted stats for PlayerStatsCard
-          return res.status(200).json({
-            message: {
-              role: 'assistant',
-              type: 'player_stats',
-              content: result.content
-            },
-            conversationId: conversation._id.toString()
-          });
-        } catch (error) {
-          console.error('Error processing basketball query:', error);
-          return res.status(200).json({
-            message: {
-              role: 'assistant',
-              type: 'text',
-              content: 'Sorry, I had trouble getting those stats. Please try again.'
-            },
-            conversationId: conversation._id.toString()
-          });
-        }
-      } else if (intent.intent === 'team_next_game') {
-        // Handle team next game intent
-        const nextGame = await getTeamNextGame(intent.team);
-
-        if (nextGame.error) {
-          return res.status(200).json({
-            message: {
-              role: 'assistant',
-              type: 'text',
-              content: nextGame.errorMessage
-            },
-            conversationId: conversation._id.toString()
-          });
-        }
-
-        return res.status(200).json({
-          message: {
-            role: 'assistant',
-            type: 'team_next_game',
-            content: nextGame.data
-          },
-          conversationId: conversation._id.toString()
-        });
+    let conversation;
+    if (conversationId) {
+      conversation = await Conversation.findById(conversationId);
+      if (!conversation) {
+        return res.status(404).json({ error: 'Conversation not found' });
       }
+    } else {
+      conversation = new Conversation({
+        userId,
+        messages: []
+      });
+    }
 
-      // For other messages, save and return
-      conversation.messages.push(responseMessage);
+    // Get AI response and analyze intent
+    const { message: responseMessage, intent } = await analyzeConversation(messages);
+    console.log('Processed response:', { responseMessage, intent });
+
+    // Handle view bets request
+    if (responseMessage.type === 'bet_list' && responseMessage.action === 'view_bets') {
+      console.log('Handling view bets request');
+      const betsResult = await getUserBets(userId);
+      if (!betsResult.success) {
+        return res.status(400).json({ error: betsResult.error });
+      }
+      
+      // Save the view bets request and response
+      conversation.messages.push({
+        role: 'user',
+        content: messages[messages.length - 1].content
+      });
+      conversation.messages.push(betsResult.message);
       await conversation.save();
-
+      
       return res.status(200).json({
-        message: responseMessage,
+        message: betsResult.message,
         conversationId: conversation._id.toString()
       });
-
-    } catch (error) {
-      console.error('Error processing message:', error);
-      return res.status(500).json({ 
-        error: 'Error processing message',
-        message: 'Sorry, there was an error processing your message. Please try again.',
-        details: error.message
-      });
     }
 
+    // For other messages, save and return
+    if (messages.length > 0) {
+      conversation.messages.push({
+        role: 'user',
+        content: messages[messages.length - 1].content
+      });
+    }
+    conversation.messages.push(responseMessage);
+    await conversation.save();
+
+    return res.status(200).json({
+      message: responseMessage,
+      conversationId: conversation._id.toString()
+    });
+
   } catch (error) {
-    console.error('Chat process error:', error);
+    console.error('Error processing message:', error);
     return res.status(500).json({ 
-      error: 'Error processing message',
-      message: 'Sorry, there was an error processing your message. Please try again.',
-      details: error.message
+      error: 'Failed to process message',
+      details: error.message 
     });
   }
 } 

@@ -162,8 +162,9 @@ function formatLeadersResponse(leaders) {
  * Analyzes conversation to decide what to do
  */
 export async function analyzeConversation(messages) {
-  const lastMessage = messages[messages.length - 1].content;
+  // Get AI response for intent detection
   const aiResponse = await generateAIResponse(messages);
+  console.log('Raw AI Response:', aiResponse);
 
   // If we got no response from the AI, default to chat
   if (!aiResponse) {
@@ -171,18 +172,73 @@ export async function analyzeConversation(messages) {
     return { type: 'chat' };
   }
 
-  console.log('Parsed AI response:', aiResponse);
-
   // Extract JSON from AI response if it exists
   let parsedIntent;
   try {
-    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}$/);
-    if (jsonMatch) {
-      parsedIntent = JSON.parse(jsonMatch[0]);
-      console.log('Extracted intent:', parsedIntent);
+    // First try to parse the content field if it's a JSON string
+    if (aiResponse.content && typeof aiResponse.content === 'string') {
+      try {
+        parsedIntent = JSON.parse(aiResponse.content);
+        console.log('Parsed JSON from content string:', parsedIntent);
+      } catch (e) {
+        // If content isn't pure JSON, try to extract JSON from it
+        const jsonMatch = aiResponse.content.match(/\{.*\}/s);
+        if (jsonMatch) {
+          parsedIntent = JSON.parse(jsonMatch[0]);
+          console.log('Extracted JSON from content:', parsedIntent);
+        }
+      }
+    }
+    
+    // If still no parsed intent, check if the response itself is JSON
+    if (!parsedIntent && typeof aiResponse === 'object') {
+      parsedIntent = aiResponse;
+      console.log('Using full response as intent:', parsedIntent);
     }
   } catch (error) {
     console.error('Error parsing intent JSON:', error);
+  }
+
+  console.log('Final parsed intent:', parsedIntent);
+
+  // Handle view bets intent
+  if (parsedIntent?.intent === 'view_bets') {
+    console.log('Handling view bets intent');
+    return {
+      message: {
+        role: 'assistant',
+        type: 'bet_list',
+        action: 'view_bets'
+      }
+    };
+  }
+
+  // If it's a betting intent, handle bet data
+  if (parsedIntent?.intent === 'betting' || parsedIntent?.type === 'betslip') {
+    console.log('Processing betting intent:', parsedIntent);
+    
+    // Ensure we have all required fields
+    const betData = {
+      type: 'betslip',
+      sport: parsedIntent.sport || 'NBA',
+      team1: parsedIntent.team1 || '',
+      team2: parsedIntent.team2 || '',
+      line: parsedIntent.line || 'ML',
+      odds: parsedIntent.odds || -110,
+      stake: parseFloat(parsedIntent.stake) || 100,
+      payout: parseFloat(parsedIntent.payout) || 190.91
+    };
+
+    console.log('Created bet data:', betData);
+
+    // Return the bet slip message in the format expected by ChatContainer
+    return {
+      message: {
+        role: 'assistant',
+        type: 'natural_bet',
+        content: betData
+      }
+    };
   }
 
   // Check if it's a basketball query
@@ -194,69 +250,58 @@ export async function analyzeConversation(messages) {
       
       if (response.type === 'error') {
         console.log('Basketball query failed:', response.message);
-        return { type: 'chat' };
+        return { 
+          message: {
+            role: 'assistant',
+            type: 'text',
+            content: response.message
+          }
+        };
       }
       
       return {
-        type: 'direct',
-        action: DIRECT_RESPONSES.BASKETBALL_INFO,
-        data: response
+        message: {
+          role: 'assistant',
+          type: 'text',
+          content: response
+        }
       };
     } catch (error) {
       console.error('Basketball query error:', error);
-      return { type: 'chat' };
+      return {
+        message: {
+          role: 'assistant',
+          type: 'text',
+          content: 'Sorry, I had trouble processing that basketball query.'
+        }
+      };
     }
   }
 
-  // Handle viewing intents
+  // Handle other viewing intents
   if (parsedIntent?.intent) {
     switch (parsedIntent.intent) {
       case 'view_open_bets':
-        return { type: 'direct', action: DIRECT_RESPONSES.VIEW_OPEN_BETS };
-      case 'view_bets':
-        return { type: 'direct', action: DIRECT_RESPONSES.VIEW_BETS };
       case 'check_balance':
-        return { type: 'direct', action: DIRECT_RESPONSES.BALANCE_CHECK };
       case 'view_listings':
-        return { type: 'direct', action: DIRECT_RESPONSES.VIEW_LISTINGS };
-      case 'place_bet':
-        if (parsedIntent.type === 'betting') {
-          return {
-            type: 'action',
-            content: `Would you like to place a bet on ${parsedIntent.team}?`,
-            tool_calls: [{
-              name: 'place_bet',
-              team: parsedIntent.team
-            }]
-          };
-        }
+        return {
+          message: {
+            role: 'assistant',
+            type: parsedIntent.intent,
+            content: null
+          }
+        };
     }
   }
 
-  // If it's a betting intent, handle bet data
-  if (parsedIntent?.type === 'betting') {
-    const betData = {
-      type: parsedIntent.bet_type || 'moneyline',
-      sport: parsedIntent.sport || 'NBA',
-      team1: parsedIntent.team || '',
-      team2: parsedIntent.opponent || '',
-      line: parsedIntent.line || '',
-      odds: parsedIntent.odds || -110,
-      stake: parseFloat(parsedIntent.stake) || 10
-    };
-
-    return {
-      type: 'action',
-      content: `Would you like to place a ${betData.type} bet on ${betData.team1}?`,
-      tool_calls: [{
-        name: 'place_bet',
-        ...betData
-      }]
-    };
-  }
-
   // Default to chat if no clear intent
-  return { type: 'chat' };
+  return {
+    message: {
+      role: 'assistant',
+      type: 'text',
+      content: aiResponse.content || 'I apologize, but I could not process that request.'
+    }
+  };
 }
 
 /**

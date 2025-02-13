@@ -15,7 +15,18 @@ const nextConfig = {
     return config;
   },
   images: {
-    domains: ['upload.wikimedia.org'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'upload.wikimedia.org',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.nba.com',
+        pathname: '/**',
+      }
+    ],
   },
 };
 

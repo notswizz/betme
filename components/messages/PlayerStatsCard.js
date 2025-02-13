@@ -67,9 +67,9 @@ const PlayerStatsCard = ({ stats }) => {
                 <Image
                   src={team.logo}
                   alt={team.name}
-                  layout="fill"
-                  objectFit="contain"
-                  className="rounded-full"
+                  width={48}
+                  height={48}
+                  className="rounded-full object-contain"
                 />
               </div>
             )}
