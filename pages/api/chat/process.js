@@ -2,7 +2,7 @@ import connectDB from '@/utils/mongodb';
 import { generateAIResponse } from '@/utils/venice';
 import Conversation from '@/models/Conversation';
 import { verifyToken } from '@/utils/auth';
-import { analyzeConversation, handleAction } from '@/utils/convoAnalyze';
+import { analyzeConversation, handleAction } from '@/utils/analyze';
 import { ObjectId } from 'mongodb';
 import { handleNormalChat } from '@/pages/api/actions/chat';
 import { checkBalance } from '@/pages/api/actions/balance';
