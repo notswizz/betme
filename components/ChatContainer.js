@@ -3,10 +3,12 @@ import ChatInput from './ChatInput';
 import MessageList from './MessageList';
 import { getConversation, saveMessage } from '../utils/conversation';
 import { authenticateUser } from '../utils/auth';
+import { useRouter } from 'next/router';
 
 const ChatContainer = () => {
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
+  const router = useRouter();
 
   // Load conversation on component mount
   useEffect(() => {
@@ -54,7 +56,7 @@ const ChatContainer = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message: content }),
+        body: JSON.stringify({ messages: [{ role: 'user', content }] }),
       });
 
       const data = await response.json();
@@ -75,6 +77,55 @@ const ChatContainer = () => {
     } catch (error) {
       console.error('Error sending message:', error);
       // Handle error (e.g., show notification)
+    }
+  };
+
+  const handleConfirmAction = async (action) => {
+    // Ignore actions that are already marked as successful
+    if (action.name && action.name.toLowerCase() === 'bet_success') {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch('/api/chat/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ messages: [], confirmAction: action, conversationId, gameState: currentGameState })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorMessage = data.message || data.error || 'Failed to process action';
+        console.error('Action error:', errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      if (data.message) {
+        setMessages(prev => [...prev, data.message]);
+      }
+    } catch (error) {
+      console.error('Action error:', error);
+      setError(error.message);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        type: 'text',
+        content: error.message || 'Sorry, there was an error processing your action. Please try again.'
+      }]);
+    } finally {
+      setIsLoading(false);
     }
   };
 

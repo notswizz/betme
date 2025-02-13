@@ -24,6 +24,10 @@ const BetConfirmation = memo(function BetConfirmation({ message, onConfirm, onCa
       payout: parseFloat(action.payout),
       status: 'pending'
     };
+    if (!formattedAction.team1 || !formattedAction.team2) {
+      console.error('Missing team information in confirmation:', formattedAction);
+      return;
+    }
     console.log('Confirming bet with formatted action:', formattedAction);
     onConfirm(formattedAction);
   };

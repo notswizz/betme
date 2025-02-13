@@ -89,7 +89,10 @@ RESPONSE FORMAT:
       model: "llama-3.3-70b",
       messages: [systemMessage, ...formattedMessages],
       temperature: 0.1,
-      max_tokens: 500
+      max_tokens: 500,
+      venice_parameters: {
+        include_venice_system_prompt: false
+      }
     })
   };
 

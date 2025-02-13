@@ -373,11 +373,55 @@ export default async function handler(req, res) {
     }
 
     // Get conversation ID and messages from request
-    const { messages, conversationId } = req.body;
+    const { messages, conversationId, confirmAction, gameState } = req.body;
     
     // Validate messages
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Invalid messages format' });
+    }
+
+    // Insert the following block immediately after verifying the token and before getting or creating the conversation
+    if (confirmAction) {
+      let conversation;
+      if (conversationId) {
+        conversation = await Conversation.findById(conversationId);
+        if (!conversation) {
+          conversation = new Conversation({ userId, messages: [] });
+        }
+      } else {
+        conversation = new Conversation({ userId, messages: [] });
+      }
+
+      const actionResult = await handleAction(confirmAction, userId, token, gameState);
+      if (!actionResult.success) {
+        return res.status(400).json({ error: actionResult.message || actionResult.error || 'Failed to process action' });
+      }
+
+      let actionMessage;
+      if (confirmAction.name && confirmAction.name.toLowerCase() === 'place_bet') {
+        actionMessage = {
+          role: 'assistant',
+          type: 'bet_success',
+          content: actionResult.bet || actionResult.message || 'Bet placed successfully.'
+        };
+      } else {
+        actionMessage = {
+          role: 'assistant',
+          type: confirmAction.name,
+          content: actionResult.message || `Action ${confirmAction.name} processed successfully.`
+        };
+      }
+
+      conversation.messages.push({
+        role: 'user',
+        content: `${confirmAction.name} action confirmed`
+      });
+      conversation.messages.push(actionMessage);
+      await conversation.save();
+      return res.status(200).json({
+        message: actionMessage,
+        conversationId: conversation._id.toString()
+      });
     }
 
     // Get or create conversation
@@ -416,6 +460,33 @@ export default async function handler(req, res) {
       
       return res.status(200).json({
         message: betsResult.message,
+        conversationId: conversation._id.toString()
+      });
+    }
+
+    // Insert the following block after the console.log('Processed response:', { responseMessage, intent }); line
+    if (intent && intent.intent === 'token_balance') {
+      // Fetch user balance from MongoDB
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      const balanceMessage = {
+        role: 'assistant',
+        type: 'text',
+        content: `Your current balance is ${user.tokenBalance} tokens.`
+      };
+
+      // Save conversation with user message and response
+      conversation.messages.push({
+        role: 'user',
+        content: messages[messages.length - 1].content
+      });
+      conversation.messages.push(balanceMessage);
+      await conversation.save();
+
+      return res.status(200).json({
+        message: balanceMessage,
         conversationId: conversation._id.toString()
       });
     }

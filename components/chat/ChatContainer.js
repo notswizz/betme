@@ -16,6 +16,7 @@ export default function ChatContainer() {
   const messagesEndRef = useRef(null);
   const router = useRouter();
   const [loadingStats, setLoadingStats] = useState(false);
+  const [tokenBalance, setTokenBalance] = useState(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -25,6 +26,31 @@ export default function ChatContainer() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const fetchTokenBalance = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch('/api/actions/balance', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTokenBalance(data.balance);
+      } else {
+        console.error('Error fetching token balance:', res.status);
+      }
+    } catch (error) {
+      console.error('Error fetching token balance in ChatContainer:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTokenBalance();
+  }, []);
 
   const startNewChat = () => {
     setMessages([]);
@@ -158,11 +184,7 @@ export default function ChatContainer() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          confirmAction: action,
-          conversationId,
-          gameState: currentGameState
-        })
+        body: JSON.stringify({ messages: [], confirmAction: action, conversationId, gameState: currentGameState })
       });
 
       const data = await response.json();
@@ -210,7 +232,7 @@ export default function ChatContainer() {
         onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
       />
       
-      <Header onLogout={handleLogout} />
+      <Header onLogout={handleLogout} tokenBalance={tokenBalance} />
       
       <SideMenu 
         isSideMenuOpen={isSideMenuOpen}

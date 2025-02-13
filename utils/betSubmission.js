@@ -170,6 +170,7 @@ export async function submitBet(betData, token = null) {
       });
 
       await bet.save();
+      console.log('Created new bet with ID:', bet._id);
 
       user.tokenBalance -= formattedBet.stake;
       await user.save();

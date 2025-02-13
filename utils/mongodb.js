@@ -15,10 +15,7 @@ if (!cached) {
 async function connectDB() {
   try {
     if (cached.conn) {
-      // Close existing connection if it exists
-      await cached.conn.disconnect();
-      cached.conn = null;
-      cached.promise = null;
+      return cached.conn;
     }
 
     if (!cached.promise) {
@@ -48,13 +45,8 @@ async function connectDB() {
       });
     }
 
-    try {
-      cached.conn = await cached.promise;
-      return cached.conn;
-    } catch (e) {
-      cached.promise = null;
-      throw e;
-    }
+    cached.conn = await cached.promise;
+    return cached.conn;
   } catch (error) {
     console.error('MongoDB connection error:', error);
     throw error;

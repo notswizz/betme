@@ -10,6 +10,7 @@ const BET_TYPES = [
 ];
 
 const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
+  console.log('BetSlipMessage rendered with initialData:', initialData);
   const [betSlip, setBetSlip] = useState(() => ({
     type: initialData.type || 'Spread',
     sport: initialData.sport || 'NFL',
@@ -24,6 +25,32 @@ const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState(null);
+
+  // Update internal state whenever initialData changes
+  useEffect(() => {
+    setBetSlip({
+      type: initialData.type || 'Spread',
+      sport: initialData.sport || 'NFL',
+      team1: initialData.team1 || '',
+      team2: initialData.team2 || '',
+      line: initialData.type === 'Moneyline' ? 'ML' : (initialData.line || ''),
+      odds: initialData.odds || '-110',
+      pick: initialData.pick || initialData.team1 || '',
+      stake: parseFloat(initialData.stake || '10'),
+      payout: parseFloat(initialData.payout || '19.52')
+    });
+    console.log('BetSlipMessage internal state updated to:', {
+      type: initialData.type || 'Spread',
+      sport: initialData.sport || 'NFL',
+      team1: initialData.team1 || '',
+      team2: initialData.team2 || '',
+      line: initialData.type === 'Moneyline' ? 'ML' : (initialData.line || ''),
+      odds: initialData.odds || '-110',
+      pick: initialData.pick || initialData.team1 || '',
+      stake: parseFloat(initialData.stake || '10'),
+      payout: parseFloat(initialData.payout || '19.52')
+    });
+  }, [initialData]);
 
   // Memoize the payout calculation
   const calculatePayout = useCallback((stake, odds) => {
@@ -70,6 +97,7 @@ const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
+    console.log('BetSlipMessage: handleSubmit triggered with betSlip:', betSlip);
     if (isSubmitting || isSubmitted) return;
 
     // Validate required fields
@@ -99,7 +127,7 @@ const BetSlipMessage = memo(function BetSlipMessage({ initialData, onSubmit }) {
       team1: betSlip.team1.trim(),
       team2: betSlip.team2.trim(),
       line: betSlip.type === 'Moneyline' ? 'ML' : (betSlip.line || '0'),
-      odds: betSlip.odds.trim(),
+      odds: typeof betSlip.odds === 'string' ? betSlip.odds.trim() : String(betSlip.odds).trim(),
       stake: parseFloat(betSlip.stake),
       payout: parseFloat(betSlip.payout),
       pick: (betSlip.pick || betSlip.team1).trim()

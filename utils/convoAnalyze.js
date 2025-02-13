@@ -161,7 +161,7 @@ function formatLeadersResponse(leaders) {
 /**
  * Analyzes conversation to decide what to do
  */
-export async function analyzeConversation(messages) {
+export async function analyzeConversation(messages, options = {}) {
   try {
     // Debug log the incoming messages
     console.log('Analyzing conversation with messages:', messages);
@@ -193,40 +193,24 @@ export async function analyzeConversation(messages) {
     let parsedIntent;
     let conversationalResponse = '';
     try {
-      // First try to parse the content field if it's a JSON string
-      if (aiResponse.content && typeof aiResponse.content === 'string') {
-        try {
-          // Try to find JSON at the end of the response
-          const parts = aiResponse.content.split(/(\{.*\})$/s);
-          if (parts.length > 1) {
-            conversationalResponse = parts[0].trim();
-            parsedIntent = JSON.parse(parts[1]);
-            console.log('Split response into:', { conversationalResponse, parsedIntent });
-          } else {
-            parsedIntent = JSON.parse(aiResponse.content);
-            console.log('Parsed JSON from content string:', parsedIntent);
-          }
-        } catch (e) {
-          // If content isn't pure JSON, try to extract JSON from it
-          const jsonMatch = aiResponse.content.match(/\{.*\}/s);
-          if (jsonMatch) {
-            conversationalResponse = aiResponse.content.replace(jsonMatch[0], '').trim();
-            parsedIntent = JSON.parse(jsonMatch[0]);
-            console.log('Extracted JSON from content:', { conversationalResponse, parsedIntent });
-          }
-        }
+      // Update to capture multi-line JSON
+      const parts = aiResponse.content.split(/(\{[\s\S]*\})$/);
+      if (parts.length > 1) {
+        conversationalResponse = parts[0].trim();
+        parsedIntent = JSON.parse(parts[1]);
+        console.log('Split response into:', { conversationalResponse, parsedIntent });
+      } else {
+        parsedIntent = JSON.parse(aiResponse.content);
+        console.log('Parsed JSON from content string:', parsedIntent);
       }
-      
-      // If still no parsed intent, check if the response itself is JSON
-      if (!parsedIntent && typeof aiResponse === 'object') {
-        parsedIntent = aiResponse;
-        console.log('Using full response as intent:', parsedIntent);
+    } catch (e) {
+      // If content isn't pure JSON, try to extract JSON from it
+      const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        conversationalResponse = aiResponse.content.replace(jsonMatch[0], '').trim();
+        parsedIntent = JSON.parse(jsonMatch[0]);
+        console.log('Extracted JSON from content:', { conversationalResponse, parsedIntent });
       }
-    } catch (error) {
-      console.error('Error parsing intent JSON:', error);
-      console.error('Raw content:', aiResponse.content);
-      // Keep the full response as conversational if JSON parsing fails
-      conversationalResponse = aiResponse.content;
     }
 
     console.log('Final parsed response:', { conversationalResponse, parsedIntent });
@@ -240,7 +224,8 @@ export async function analyzeConversation(messages) {
           type: 'bet_list',
           action: 'view_bets',
           content: conversationalResponse || 'Let me show you your current bets.'
-        }
+        },
+        intent: parsedIntent
       };
     }
 
@@ -248,12 +233,12 @@ export async function analyzeConversation(messages) {
     if (parsedIntent?.intent === 'betting' || parsedIntent?.type === 'betslip') {
       console.log('Processing betting intent:', parsedIntent);
       
-      // Ensure we have all required fields
+      // Ensure we have all required fields, using gameState as fallback
       const betData = {
         type: 'betslip',
         sport: parsedIntent.sport || 'NBA',
-        team1: parsedIntent.team1 || '',
-        team2: parsedIntent.team2 || '',
+        team1: parsedIntent.team1 || (options.gameState && options.gameState.team1) || '',
+        team2: parsedIntent.team2 || (options.gameState && options.gameState.team2) || '',
         line: parsedIntent.line || 'ML',
         odds: parsedIntent.odds || -110,
         stake: parseFloat(parsedIntent.stake) || 100,
@@ -268,7 +253,8 @@ export async function analyzeConversation(messages) {
           type: 'natural_bet',
           content: betData,
           text: conversationalResponse || 'I can help you place that bet.'
-        }
+        },
+        intent: parsedIntent
       };
     }
 
@@ -286,7 +272,8 @@ export async function analyzeConversation(messages) {
               role: 'assistant',
               type: 'text',
               content: response.message
-            }
+            },
+            intent: parsedIntent || { intent: 'chat', confidence: 1.0 }
           };
         }
         
@@ -295,7 +282,8 @@ export async function analyzeConversation(messages) {
             role: 'assistant',
             type: 'text',
             content: conversationalResponse ? `${conversationalResponse}\n\n${response}` : response
-          }
+          },
+          intent: parsedIntent
         };
       } catch (error) {
         console.error('Basketball query error:', error);
@@ -304,7 +292,8 @@ export async function analyzeConversation(messages) {
             role: 'assistant',
             type: 'text',
             content: 'Sorry, I had trouble processing that basketball query.'
-          }
+          },
+          intent: parsedIntent || { intent: 'chat', confidence: 1.0 }
         };
       }
     }
@@ -320,9 +309,24 @@ export async function analyzeConversation(messages) {
               role: 'assistant',
               type: parsedIntent.intent,
               content: conversationalResponse || null
-            }
+            },
+            intent: parsedIntent
           };
       }
+    }
+
+    // Insert the following branch:
+    if (parsedIntent?.intent === 'add_tokens') {
+      const tokenAmount = parsedIntent.amount || parsedIntent.token_amount;
+      parsedIntent.name = 'add_tokens';
+      return {
+        message: {
+          role: 'assistant',
+          type: 'action_confirmation',
+          content: `Would you like to add ${tokenAmount} tokens to your balance?`
+        },
+        intent: parsedIntent
+      };
     }
 
     // Default to chat if no clear intent or just conversational
@@ -331,7 +335,8 @@ export async function analyzeConversation(messages) {
         role: 'assistant',
         type: 'text',
         content: conversationalResponse || aiResponse.content || 'I apologize, but I could not process that request.'
-      }
+      },
+      intent: parsedIntent || { intent: 'chat', confidence: 1.0 }
     };
   } catch (error) {
     console.error('Error in analyzeConversation:', error);
@@ -340,7 +345,8 @@ export async function analyzeConversation(messages) {
         role: 'assistant',
         type: 'text',
         content: 'Sorry, I encountered an error processing your request. Please try again.'
-      }
+      },
+      intent: { intent: 'chat', confidence: 1.0 }
     };
   }
 }
@@ -348,25 +354,54 @@ export async function analyzeConversation(messages) {
 /**
  * Makes API call after action is confirmed
  */
-export async function handleAction(action, userId, token = null) {
+export async function handleAction(action, userId, token = null, gameState = {}) {
+  // If the action object has a nested 'action' property, use it and preserve requiresConfirmation
+  if (action.action) {
+    const nested = action.action;
+    action = { ...nested, requiresConfirmation: action.requiresConfirmation || nested.requiresConfirmation };
+  }
+
+  // Fallback: if action.name is missing
+  if (!action.name && action.intent === 'add_tokens') {
+    action.name = 'add_tokens';
+  } else if (!action.name && action.type === 'natural_bet') {
+    action.name = 'place_bet';
+  } else if (!action.name && action.type === 'betslip') {
+    action.name = 'place_bet';
+  } else if (!action.name && action.requiresConfirmation) {
+    action.name = 'place_bet';
+  } else if (!action.name && action.content && typeof action.content === 'string' && 
+             (action.content.toLowerCase().includes('place a bet') || action.content.toLowerCase().includes('place this bet'))) {
+    action.name = 'place_bet';
+  }
+
+  // Normalize the action name to lowercase if it exists
+  if (action.name && typeof action.name === 'string') {
+    action.name = action.name.toLowerCase();
+  }
+
+  // If team1 or team2 are missing, attempt to fill them from gameState if available
+  if ((!action.team1 || !action.team2) && gameState && gameState.team1 && gameState.team2) {
+    if (!action.team1) action.team1 = gameState.team1;
+    if (!action.team2) action.team2 = gameState.team2;
+  }
+
+  // Debug log the final action object
+  console.log('Final action in handleAction:', action);
+
   try {
     switch (action.name) {
       case 'add_tokens':
-        return await addTokens(userId, action.amount);
+        return await addTokens(userId, action.amount || action.token_amount);
       case 'create_listing':
         return await createListing(userId, {
           title: action.listingTitle,
           tokenPrice: action.listingPrice
         });
       case 'place_bet':
-        // Log the incoming action data
         console.log('Handling bet action:', action);
-        
-        // Parse numeric values
         const stake = parseFloat(action.stake);
         const odds = parseInt(action.odds);
-        
-        // Validate and format bet data
         const betData = {
           type: action.type,
           sport: action.sport,
@@ -378,7 +413,6 @@ export async function handleAction(action, userId, token = null) {
           payout: parseFloat(action.payout)
         };
 
-        // Validate required fields with detailed error
         const missingFields = [];
         if (!betData.type) missingFields.push('type');
         if (!betData.sport) missingFields.push('sport');
@@ -392,11 +426,11 @@ export async function handleAction(action, userId, token = null) {
           console.error(error, betData);
           throw new Error(error);
         }
-        
+
         if (!betData || !betData.type || !betData.stake || !betData.odds) {
           throw new Error('Invalid bet data');
         }
-        
+
         return await submitBet(betData, token);
       case 'basketball_query':
         return await handleBasketballQuery(action.query);
@@ -409,7 +443,6 @@ export async function handleAction(action, userId, token = null) {
     }
   } catch (error) {
     console.error('Action handling error:', error);
-    // Handle specific auth errors
     if (error.message === 'Please login again') {
       return {
         success: false,
