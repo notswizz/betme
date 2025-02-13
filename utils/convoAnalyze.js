@@ -191,18 +191,28 @@ export async function analyzeConversation(messages) {
 
     // Extract JSON from AI response if it exists
     let parsedIntent;
+    let conversationalResponse = '';
     try {
       // First try to parse the content field if it's a JSON string
       if (aiResponse.content && typeof aiResponse.content === 'string') {
         try {
-          parsedIntent = JSON.parse(aiResponse.content);
-          console.log('Parsed JSON from content string:', parsedIntent);
+          // Try to find JSON at the end of the response
+          const parts = aiResponse.content.split(/(\{.*\})$/s);
+          if (parts.length > 1) {
+            conversationalResponse = parts[0].trim();
+            parsedIntent = JSON.parse(parts[1]);
+            console.log('Split response into:', { conversationalResponse, parsedIntent });
+          } else {
+            parsedIntent = JSON.parse(aiResponse.content);
+            console.log('Parsed JSON from content string:', parsedIntent);
+          }
         } catch (e) {
           // If content isn't pure JSON, try to extract JSON from it
           const jsonMatch = aiResponse.content.match(/\{.*\}/s);
           if (jsonMatch) {
+            conversationalResponse = aiResponse.content.replace(jsonMatch[0], '').trim();
             parsedIntent = JSON.parse(jsonMatch[0]);
-            console.log('Extracted JSON from content:', parsedIntent);
+            console.log('Extracted JSON from content:', { conversationalResponse, parsedIntent });
           }
         }
       }
@@ -215,9 +225,11 @@ export async function analyzeConversation(messages) {
     } catch (error) {
       console.error('Error parsing intent JSON:', error);
       console.error('Raw content:', aiResponse.content);
+      // Keep the full response as conversational if JSON parsing fails
+      conversationalResponse = aiResponse.content;
     }
 
-    console.log('Final parsed intent:', parsedIntent);
+    console.log('Final parsed response:', { conversationalResponse, parsedIntent });
 
     // Handle view bets intent
     if (parsedIntent?.intent === 'view_bets') {
@@ -226,7 +238,8 @@ export async function analyzeConversation(messages) {
         message: {
           role: 'assistant',
           type: 'bet_list',
-          action: 'view_bets'
+          action: 'view_bets',
+          content: conversationalResponse || 'Let me show you your current bets.'
         }
       };
     }
@@ -253,14 +266,15 @@ export async function analyzeConversation(messages) {
         message: {
           role: 'assistant',
           type: 'natural_bet',
-          content: betData
+          content: betData,
+          text: conversationalResponse || 'I can help you place that bet.'
         }
       };
     }
 
     // Check if it's a basketball query
     if (parsedIntent?.intent === 'basketball_query') {
-      console.log('Detected basketball query:', lastMessage);
+      console.log('Detected basketball query');
       try {
         const response = await handleBasketballIntent(parsedIntent);
         console.log('Basketball API response:', response);
@@ -280,7 +294,7 @@ export async function analyzeConversation(messages) {
           message: {
             role: 'assistant',
             type: 'text',
-            content: response
+            content: conversationalResponse ? `${conversationalResponse}\n\n${response}` : response
           }
         };
       } catch (error) {
@@ -305,18 +319,18 @@ export async function analyzeConversation(messages) {
             message: {
               role: 'assistant',
               type: parsedIntent.intent,
-              content: null
+              content: conversationalResponse || null
             }
           };
       }
     }
 
-    // Default to chat if no clear intent
+    // Default to chat if no clear intent or just conversational
     return {
       message: {
         role: 'assistant',
         type: 'text',
-        content: aiResponse.content || 'I apologize, but I could not process that request.'
+        content: conversationalResponse || aiResponse.content || 'I apologize, but I could not process that request.'
       }
     };
   } catch (error) {
