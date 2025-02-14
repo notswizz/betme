@@ -11,7 +11,7 @@ import User from '@/models/User';
 import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 import { getPlayerStats, getTeamNextGame, handleBasketballQuery, fetchPlayerStatistics } from '@/utils/nbaApi';
-import { findPlayerByName } from '@/services/playerService';
+
 import { ensureModels } from '@/utils/models';
 
 // Constants for validation
