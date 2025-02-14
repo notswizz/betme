@@ -1,11 +1,32 @@
 import mongoose from 'mongoose';
-import { getModels } from '@/utils/models';
 
-// Delete the model if it exists to force schema recompilation
-if (mongoose.models.Bet) {
-  delete mongoose.models.Bet;
-}
+// User Schema
+const UserSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  username: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  tokenBalance: {
+    type: Number,
+    default: 1000
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
 
+// Bet Schema
 const BetSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -70,8 +91,23 @@ const BetSchema = new mongoose.Schema({
   }
 });
 
-// Create and export the model
-const Bet = mongoose.models.Bet || mongoose.model('Bet', BetSchema);
+// Function to get models with schema registration handling
+export function getModels() {
+  // Delete existing models in development to force schema recompilation
+  if (process.env.NODE_ENV === 'development') {
+    if (mongoose.models.User) delete mongoose.models.User;
+    if (mongoose.models.Bet) delete mongoose.models.Bet;
+  }
 
-// Export the Bet model
-export default (getModels().Bet); 
+  // Register models
+  const User = mongoose.models.User || mongoose.model('User', UserSchema);
+  const Bet = mongoose.models.Bet || mongoose.model('Bet', BetSchema);
+
+  return { User, Bet };
+}
+
+// Export a function to ensure models are registered
+export async function ensureModels() {
+  await mongoose.connect(process.env.MONGODB_URI);
+  return getModels();
+} 

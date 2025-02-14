@@ -12,6 +12,7 @@ import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 import { getPlayerStats, getTeamNextGame, handleBasketballQuery, fetchPlayerStatistics } from '@/utils/nbaApi';
 import { findPlayerByName } from '@/services/playerService';
+import { ensureModels } from '@/utils/models';
 
 // Constants for validation
 const VALID_INTENTS = ['basketball_query', 'place_bet', 'view_bets', 'view_open_bets', 'chat', 'betting'];
@@ -460,8 +461,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Connect to database
+    // Connect to database and ensure models are registered
     await connectDB();
+    const { User, Bet } = await ensureModels();
 
     // Get user ID from token
     const token = req.headers.authorization?.split(' ')[1];
@@ -608,10 +610,10 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error processing message:', error);
+    console.error('Error in chat process:', error);
     return res.status(500).json({ 
-      error: 'Failed to process message',
-      details: error.message 
+      error: error.message || 'Internal server error',
+      details: error.toString()
     });
   }
 } 
