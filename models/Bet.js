@@ -5,7 +5,7 @@ if (mongoose.models.Bet) {
   delete mongoose.models.Bet;
 }
 
-const betSchema = new mongoose.Schema({
+const BetSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -69,7 +69,6 @@ const betSchema = new mongoose.Schema({
   }
 });
 
-// Force model compilation with new schema
-const Bet = mongoose.models.Bet || mongoose.model('Bet', betSchema);
-
-export default Bet; 
+// Export both schema and model
+export { BetSchema };
+export default mongoose.models.Bet || mongoose.model('Bet', BetSchema); 

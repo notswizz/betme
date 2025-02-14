@@ -1,8 +1,10 @@
 import { verifyToken } from '@/utils/auth';
 import connectDB from '@/utils/mongodb';
-import Bet from '@/models/Bet';
-import User from '@/models/User';
 import mongoose from 'mongoose';
+
+// Import schemas instead of models
+import { UserSchema } from '@/models/User';
+import { BetSchema } from '@/models/Bet';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -11,6 +13,10 @@ export default async function handler(req, res) {
 
   try {
     await connectDB();
+
+    // Ensure models are registered
+    const User = mongoose.models.User || mongoose.model('User', UserSchema);
+    const Bet = mongoose.models.Bet || mongoose.model('Bet', BetSchema);
 
     // Get user ID from token
     const token = req.headers.authorization?.split(' ')[1];

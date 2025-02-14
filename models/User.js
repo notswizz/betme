@@ -21,5 +21,6 @@ const UserSchema = new mongoose.Schema({
   }
 });
 
-// Prevent mongoose from creating the model multiple times
+// Export both schema and model
+export { UserSchema };
 export default mongoose.models.User || mongoose.model('User', UserSchema); 
