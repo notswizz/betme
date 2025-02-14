@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const BetListMessage = ({ bets, onAcceptBet, currentUserId }) => {
+const BetListMessage = ({ bets, onAcceptBet, currentUserId, isMyBets }) => {
   const [acceptingBetId, setAcceptingBetId] = useState(null);
 
   // Parse bets if it's a string
@@ -19,81 +19,110 @@ const BetListMessage = ({ bets, onAcceptBet, currentUserId }) => {
 
   if (!parsedBets || parsedBets.length === 0) {
     return (
-      <div className="w-full p-4 rounded-xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50">
-        <div className="text-gray-400 text-center">No bets found</div>
+      <div className="w-full p-3 rounded-xl bg-gradient-to-br from-gray-800/50 to-gray-900/50 border border-gray-700/50">
+        <div className="text-gray-400 text-center text-sm">No bets found</div>
       </div>
     );
   }
 
   return (
-    <div className="w-full space-y-4">
-      <div className="text-sm font-bold text-center mb-3 bg-gradient-to-r from-blue-600 to-blue-400 text-white py-2 rounded-xl flex items-center justify-center gap-2 shadow-lg">
-        🎲 <span className="tracking-wide">OPEN BETS</span>
-      </div>
-      
+    <div className="w-full max-w-full mx-auto">
       {/* Horizontal scrolling container with snap scrolling */}
-      <div className="w-full overflow-x-auto pb-4 scrollbar-hide">
-        <div className="flex gap-3 snap-x snap-mandatory">
-          {parsedBets.map((bet) => (
-            <div key={bet._id} className="snap-center flex-none w-[300px] first:ml-[calc((100%-300px)/2)] last:mr-[calc((100%-300px)/2)]">
-              <div className="bg-gradient-to-br from-gray-900/95 to-gray-800/95 backdrop-blur-xl rounded-xl p-4 border border-gray-700/30">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <div className="text-sm font-medium text-gray-300">
-                      <span className="text-blue-400">{bet.sport}</span>
-                      <span className="mx-2">•</span>
-                      <span className="text-gray-500">{bet.type}</span>
+      <div className="relative w-full">
+        <div className="overflow-x-auto scrollbar-hide">
+          <div className="flex gap-3 snap-x snap-mandatory min-w-0 px-4 pb-4 mx-auto max-w-[calc(100vw-2rem)]">
+            {parsedBets.map((bet) => (
+              <div key={bet._id} className="snap-center flex-none w-[280px] first:ml-0">
+                <div className="relative group">
+                  {/* Animated border effect */}
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-xl opacity-30 group-hover:opacity-100 blur transition duration-500 group-hover:duration-200 animate-gradient-xy"></div>
+                  
+                  {/* Card content */}
+                  <div className="relative bg-gradient-to-br from-gray-900/95 via-gray-900 to-gray-800/95 backdrop-blur-xl rounded-xl h-full">
+                    {/* Top Section with Sport and Type */}
+                    <div className="px-3 py-2 border-b border-gray-700/30 bg-gradient-to-r from-gray-800/80 via-gray-900/80 to-gray-800/80 rounded-t-xl flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                          <span className="text-blue-400 text-xs font-medium">{bet.sport}</span>
+                        </div>
+                        <span className="text-gray-600">•</span>
+                        <span className="text-gray-500 text-xs">{bet.type}</span>
+                      </div>
+                      <div className="text-[10px] text-gray-500 bg-gray-800/50 px-1.5 py-0.5 rounded-full border border-gray-700/30">
+                        {bet.createdAt}
+                      </div>
                     </div>
-                    <div className="text-lg font-semibold text-white mt-1">
-                      {bet.team1} vs {bet.team2}
+
+                    {/* Main Content */}
+                    <div className="p-2.5">
+                      {/* Teams */}
+                      <div className="relative">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2 bg-gray-800/30 p-1.5 rounded-lg border border-gray-700/30 group-hover:border-gray-600/30 transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-white">
+                                {bet.team1}
+                              </div>
+                            </div>
+                            <div className="text-green-400 text-sm font-bold whitespace-nowrap px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
+                              {bet.odds}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 bg-gray-800/30 p-1.5 rounded-lg border border-gray-700/30 group-hover:border-gray-600/30 transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-white">
+                                {bet.team2}
+                              </div>
+                            </div>
+                            <div className="text-xs text-blue-400 font-medium px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                              Line: {bet.line}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Stakes */}
+                        <div className="mt-2 flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/30">
+                          <div>
+                            <span className="text-gray-500">Stake:</span>
+                            <span className="ml-1.5 text-white font-medium">${bet.stake}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Payout:</span>
+                            <span className="ml-1.5 text-green-400 font-medium">${bet.payout}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-400">Line: {bet.line}</div>
-                    <div className="text-lg font-bold text-green-400">{bet.odds}</div>
+
+                    {/* Action Section */}
+                    <div className="px-2.5 pb-2.5">
+                      {bet.status === 'pending' && bet.userId !== currentUserId ? (
+                        <button
+                          onClick={() => handleAcceptBet(bet)}
+                          disabled={acceptingBetId === bet._id}
+                          className={`w-full py-1.5 rounded-lg text-xs font-medium transition-all duration-200 relative group overflow-hidden ${
+                            acceptingBetId === bet._id
+                              ? 'bg-gray-600 cursor-not-allowed'
+                              : 'bg-gradient-to-r from-green-500 to-green-400 hover:from-green-400 hover:to-green-300 active:scale-[0.98]'
+                          }`}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-[-50%] group-hover:translate-x-[50%]"></div>
+                          {acceptingBetId === bet._id ? 'Accepting...' : 'Accept Bet'}
+                        </button>
+                      ) : bet.status !== 'pending' && (
+                        <div className="flex justify-end">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            {bet.status.charAt(0).toUpperCase() + bet.status.slice(1)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm border-t border-gray-700/30 pt-3 mt-3">
-                  <div>
-                    <span className="text-gray-500">Stake:</span>
-                    <span className="ml-2 text-white">${bet.stake}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-gray-500">Payout:</span>
-                    <span className="ml-2 text-green-400">${bet.payout}</span>
-                  </div>
-                  <div className="col-span-2 text-xs text-gray-500 text-right">
-                    {bet.createdAt}
-                  </div>
-                </div>
-
-                {bet.status === 'pending' && bet.userId !== currentUserId && (
-                  <div className="mt-4">
-                    <button
-                      onClick={() => handleAcceptBet(bet)}
-                      disabled={acceptingBetId === bet._id}
-                      className={`w-full py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        acceptingBetId === bet._id
-                          ? 'bg-gray-600 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-green-500 to-green-400 hover:from-green-400 hover:to-green-300 active:scale-[0.98]'
-                      }`}
-                    >
-                      {acceptingBetId === bet._id ? 'Accepting...' : 'Accept Bet'}
-                    </button>
-                  </div>
-                )}
-
-                {bet.status !== 'pending' && (
-                  <div className="mt-4 flex justify-end">
-                    <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/20">
-                      {bet.status.charAt(0).toUpperCase() + bet.status.slice(1)}
-                    </span>
-                  </div>
-                )}
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>

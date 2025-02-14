@@ -270,30 +270,46 @@ export default function ChatContainer() {
   };
 
   return (
-    <div className="flex h-[100dvh] bg-gray-900 overflow-hidden">
-      <MobileMenuButton 
-        isSideMenuOpen={isSideMenuOpen}
-        onClick={() => setIsSideMenuOpen(!isSideMenuOpen)}
-      />
-      
-      <Header onLogout={handleLogout} tokenBalance={tokenBalance} />
-      
+    <div className="flex h-full relative">
       <SideMenu 
-        isSideMenuOpen={isSideMenuOpen}
+        isSideMenuOpen={isSideMenuOpen} 
         onNewChat={startNewChat}
+        onClose={() => {
+          setIsSideMenuOpen(false);
+          // Add a small delay before allowing the menu to be reopened
+          const button = document.querySelector('.mobile-menu-button');
+          if (button) {
+            button.disabled = true;
+            setTimeout(() => {
+              button.disabled = false;
+            }, 300); // Match the duration of the menu animation
+          }
+        }}
       />
       
-      <ChatArea 
-        messages={messages}
-        isLoading={isLoading}
-        error={error}
-        onNewMessage={handleNewMessage}
-        onConfirmAction={handleConfirmAction}
-        onCancelAction={handleCancelAction}
-        onAcceptBet={handleAcceptBet}
-        messagesEndRef={messagesEndRef}
-        gameState={currentGameState}
-      />
+      <div className="flex-1 flex flex-col h-full relative">
+        <Header onLogout={handleLogout}>
+          <MobileMenuButton 
+            isOpen={isSideMenuOpen}
+            className="mobile-menu-button" 
+            onClick={() => {
+              setIsSideMenuOpen(!isSideMenuOpen);
+            }}
+          />
+        </Header>
+        
+        <ChatArea
+          messages={messages}
+          isLoading={isLoading}
+          error={error}
+          onNewMessage={handleNewMessage}
+          onConfirmAction={handleConfirmAction}
+          onCancelAction={handleCancelAction}
+          onAcceptBet={handleAcceptBet}
+          loadingStats={loadingStats}
+          messagesEndRef={messagesEndRef}
+        />
+      </div>
     </div>
   );
 } 

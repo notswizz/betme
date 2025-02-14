@@ -1,6 +1,8 @@
 import { verifyToken } from '@/utils/auth';
 import connectDB from '@/utils/mongodb';
 import Bet from '@/models/Bet';
+import User from '@/models/User';
+import mongoose from 'mongoose';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -8,86 +10,112 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Verify authentication
+    await connectDB();
+
+    // Get user ID from token
     const token = req.headers.authorization?.split(' ')[1];
     const userId = await verifyToken(token);
-    
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Connect to database
-    await connectDB();
+    // Convert userId to ObjectId
+    const userObjectId = new mongoose.Types.ObjectId(userId);
 
-    // Get total bets
-    const total = await Bet.countDocuments({ userId });
+    // Get all user's bets (both as creator and challenger)
+    const userBets = await Bet.find({
+      $or: [
+        { userId: userObjectId },
+        { challengerId: userObjectId }
+      ]
+    }).lean();
 
-    // Get pending bets
-    const pending = await Bet.countDocuments({ 
-      userId, 
-      status: 'pending'
+    // Calculate statistics
+    const stats = {
+      total: userBets.length,
+      pending: 0,
+      matched: 0,
+      completed: 0,
+      created: 0,
+      accepted: 0,
+      totalStaked: 0,
+      potentialPayout: 0,
+      activeBets: 0
+    };
+
+    userBets.forEach(bet => {
+      // Count by status
+      stats[bet.status] = (stats[bet.status] || 0) + 1;
+
+      // Count created vs accepted bets
+      if (bet.userId.toString() === userId) {
+        stats.created++;
+      } else if (bet.challengerId?.toString() === userId) {
+        stats.accepted++;
+      }
+
+      // Calculate financial stats
+      if (bet.status === 'pending' || bet.status === 'matched') {
+        stats.totalStaked += bet.stake;
+        stats.potentialPayout += bet.payout;
+        stats.activeBets++;
+      }
     });
 
-    // Get won bets
-    const won = await Bet.countDocuments({ 
-      userId, 
-      status: 'won'
-    });
+    // Get user's token balance
+    const user = await User.findById(userId).select('tokenBalance').lean();
 
-    // Get judging stats
-    const totalJudged = await Bet.countDocuments({
-      userId,
-      hasJudged: true
-    });
-
-    const accurateJudgments = await Bet.countDocuments({
-      userId,
-      hasJudged: true,
-      judgmentAccurate: true
-    });
-
-    // Calculate accuracy rate
-    const accuracyRate = totalJudged > 0 
-      ? Math.round((accurateJudgments / totalJudged) * 100) 
-      : 0;
-
-    // Get user's judging rank (simplified example - you might want to implement more sophisticated ranking)
-    const allUsers = await Bet.aggregate([
-      { $match: { hasJudged: true } },
-      { $group: { 
-        _id: '$userId',
-        accurateCount: { 
-          $sum: { $cond: [{ $eq: ['$judgmentAccurate', true] }, 1, 0] }
-        },
-        totalCount: { $sum: 1 }
-      }},
-      { $project: {
-        accuracy: { 
-          $multiply: [
-            { $divide: ['$accurateCount', { $max: ['$totalCount', 1] }] },
-            100
-          ]
+    // Get user's rank based on total bets
+    const userRank = await Bet.aggregate([
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ['$challengerId', null] },
+              '$userId',
+              '$challengerId'
+            ]
+          },
+          totalBets: { $sum: 1 }
         }
-      }},
-      { $sort: { accuracy: -1 } }
+      },
+      { $sort: { totalBets: -1 } }
     ]);
 
-    const userRank = allUsers.findIndex(u => u._id.toString() === userId.toString()) + 1;
+    const rankIndex = userRank.findIndex(rank => 
+      rank._id.toString() === userId
+    );
 
     return res.status(200).json({
-      total,
-      pending,
-      won,
-      reputation: {
-        totalJudged,
-        accurateJudgments,
-        accuracyRate,
-        rank: userRank || 'N/A'
+      success: true,
+      stats: {
+        betting: {
+          total: stats.total,
+          pending: stats.pending,
+          matched: stats.matched,
+          completed: stats.completed,
+          created: stats.created,
+          accepted: stats.accepted
+        },
+        financial: {
+          tokenBalance: user?.tokenBalance || 0,
+          totalStaked: stats.totalStaked,
+          potentialPayout: stats.potentialPayout,
+          activeBets: stats.activeBets
+        },
+        rank: {
+          position: rankIndex + 1,
+          totalUsers: userRank.length,
+          percentile: Math.round(((userRank.length - (rankIndex + 1)) / userRank.length) * 100)
+        }
       }
     });
 
   } catch (error) {
     console.error('Error fetching bet stats:', error);
-    return res.status(500).json({ error: 'Failed to fetch betting statistics' });
+    return res.status(500).json({ 
+      error: 'Failed to fetch bet statistics',
+      details: error.message 
+    });
   }
 } 

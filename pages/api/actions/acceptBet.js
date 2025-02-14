@@ -81,12 +81,12 @@ export default async function handler(req, res) {
         throw new Error('Failed to update bet');
       }
 
-      // Verify the update was successful
-      const verifyBet = await Bet.findById(betId).lean();
+      // Verify the update was successful within the same transaction
+      const verifyBet = await Bet.findById(betId).session(session);
       console.log('Verification of updated bet:', JSON.stringify(verifyBet, null, 2));
 
-      if (verifyBet.status !== 'matched' || verifyBet.challengerId.toString() !== userId) {
-        throw new Error('Bet update verification failed');
+      if (!verifyBet || verifyBet.status !== 'matched' || verifyBet.challengerId.toString() !== userId) {
+        throw new Error('Bet update verification failed - please try again');
       }
 
       // Deduct tokens from challenger
