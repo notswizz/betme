@@ -1,8 +1,7 @@
 import { verifyToken } from '@/utils/auth';
 import connectDB from '@/utils/mongodb';
-import Bet from '@/models/Bet';
-import User from '@/models/User';
 import mongoose from 'mongoose';
+import { ensureModels } from '@/utils/models';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -10,7 +9,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Connect to database and ensure models are registered
     await connectDB();
+    const { User, Bet } = await ensureModels();
 
     // Get user ID from token
     const token = req.headers.authorization?.split(' ')[1];
