@@ -12,7 +12,8 @@ const BetListMessage = ({ bets, onAcceptBet, onCompleteBet, currentUserId, isMyB
   const isMyBet = (bet) => bet.userId === currentUserId || bet.challengerId === currentUserId;
   const isJudgingBet = (bet) => (
     bet.status === 'voting' && 
-    bet.challengerId === currentUserId &&
+    bet.userId !== currentUserId && 
+    bet.challengerId !== currentUserId &&
     !bet.votes?.some(v => v.userId === currentUserId)
   );
 

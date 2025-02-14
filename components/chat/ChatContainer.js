@@ -134,9 +134,13 @@ export default function ChatContainer() {
           });
           setLoadingStats(false);
         }
-        // For bet slips, replace any existing bet slips
+        // For bet slips, don't add to messages - they'll be rendered directly by ChatMessage
         else if (newMessage.type === 'betslip') {
-          setMessages(prev => [...prev, newMessage]);
+          // Just update the latest message to be the betslip without any text
+          setMessages(prev => {
+            const withoutLastBetslip = prev.filter(msg => msg.type !== 'betslip');
+            return [...withoutLastBetslip, { ...newMessage, text: null }];
+          });
         }
         // For bet lists, just add the message
         else if (newMessage.type === 'bet_list') {

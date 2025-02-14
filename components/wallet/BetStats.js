@@ -12,20 +12,31 @@ function Tooltip({ content, visible, className = '' }) {
   );
 }
 
+function StatValue({ value, label, className = '' }) {
+  return (
+    <div className={`flex flex-col items-center ${className}`}>
+      <span className="text-sm font-medium text-white">{value}</span>
+      <span className="text-[10px] text-gray-400">{label}</span>
+    </div>
+  );
+}
+
 function StatItem({ icon, value, label, tooltip, className = '' }) {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
     <div 
-      className={`relative flex items-center gap-2 group cursor-help ${className}`}
+      className={`relative flex items-center gap-1.5 group cursor-help ${className}`}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      <div className={`w-3.5 h-3.5 rounded-full ${icon.bg} flex items-center justify-center`}>
-        <div className={`w-2 h-2 rounded-full ${icon.dot}`}></div>
+      <div className={`w-2.5 h-2.5 rounded-full ${icon.bg} flex items-center justify-center flex-shrink-0`}>
+        <div className={`w-1.5 h-1.5 rounded-full ${icon.dot}`}></div>
       </div>
-      <span className="text-white text-sm">{value}</span>
-      <span className="text-gray-500 text-xs">{label}</span>
+      <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
+        <span className="text-sm font-medium text-white truncate">{value}</span>
+        <span className="text-[10px] text-gray-400 flex-shrink-0">{label}</span>
+      </div>
       <Tooltip 
         content={tooltip}
         visible={showTooltip}
@@ -91,26 +102,26 @@ export default function BetStats() {
   if (error || !stats) return null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Stats Toggle */}
-      <div className="flex items-center justify-between px-2">
-        <div className="flex items-center space-x-3">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center space-x-2">
           <button
             onClick={() => setStatsType('personal')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
               statsType === 'personal'
                 ? 'bg-purple-500/20 text-purple-300'
-                : 'text-gray-400 hover:text-gray-300'
+                : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800/50'
             }`}
           >
             Personal
           </button>
           <button
             onClick={() => setStatsType('global')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
               statsType === 'global'
                 ? 'bg-blue-500/20 text-blue-300'
-                : 'text-gray-400 hover:text-gray-300'
+                : 'text-gray-400 hover:text-gray-300 hover:bg-gray-800/50'
             }`}
           >
             Global
@@ -118,91 +129,91 @@ export default function BetStats() {
         </div>
       </div>
 
-      {/* Bet Activity Card */}
-      <div className="bg-purple-600/10 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-purple-500/20 hover:border-purple-500/30 transition-all duration-200">
-        <StatItem 
-          icon={{ bg: 'bg-purple-500/20', dot: 'bg-purple-400' }}
-          value={stats.betting.created}
-          label="Bets Created"
-          tooltip={statsType === "personal" ? "Total number of bets you've created" : "Total number of bets created by all users"}
-        />
-        <StatItem 
-          icon={{ bg: 'bg-green-500/20', dot: 'bg-green-400' }}
-          value={stats.betting.matched}
-          label="Bets Matched"
-          tooltip={statsType === "personal" ? "Number of bets you've accepted from other users" : "Total number of bets matched across all users"}
-        />
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Created/Matched Stats */}
+        <div className="bg-gradient-to-br from-purple-600/20 to-purple-900/20 backdrop-blur-lg rounded-xl p-2.5 space-y-2 border border-purple-500/20">
+          <StatItem 
+            icon={{ bg: 'bg-purple-500/30', dot: 'bg-purple-400' }}
+            value={stats.betting.created}
+            label="Created"
+            tooltip={statsType === "personal" ? "Total number of bets you've created" : "Total number of bets created by all users"}
+          />
+          <StatItem 
+            icon={{ bg: 'bg-green-500/30', dot: 'bg-green-400' }}
+            value={stats.betting.matched}
+            label="Matched"
+            tooltip={statsType === "personal" ? "Number of bets you've accepted from other users" : "Total number of bets matched across all users"}
+          />
+        </div>
+
+        {/* Open/Active Stats */}
+        <div className="bg-gradient-to-br from-blue-600/20 to-blue-900/20 backdrop-blur-lg rounded-xl p-2.5 space-y-2 border border-blue-500/20">
+          <StatItem 
+            icon={{ bg: 'bg-blue-500/30', dot: 'bg-blue-400' }}
+            value={stats.betting.pending}
+            label="Open"
+            tooltip={statsType === "personal" ? "Your unmatched bets waiting to be accepted" : "Total unmatched bets waiting to be accepted"}
+          />
+          <StatItem 
+            icon={{ bg: 'bg-orange-500/30', dot: 'bg-orange-400' }}
+            value={stats.financial.activeBets}
+            label="Active"
+            tooltip={statsType === "personal" ? "Your matched bets that haven't been completed yet" : "Total matched bets that haven't been completed yet"}
+          />
+        </div>
       </div>
 
-      {/* Current Bets Card */}
-      <div className="bg-blue-600/10 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-blue-500/20 hover:border-blue-500/30 transition-all duration-200">
-        <StatItem 
-          icon={{ bg: 'bg-blue-500/20', dot: 'bg-blue-400' }}
-          value={stats.betting.pending}
-          label="Open Bets"
-          tooltip={statsType === "personal" ? "Your unmatched bets waiting to be accepted" : "Total unmatched bets waiting to be accepted"}
-        />
-        <StatItem 
-          icon={{ bg: 'bg-orange-500/20', dot: 'bg-orange-400' }}
-          value={stats.financial.activeBets}
-          label="Active Bets"
-          tooltip={statsType === "personal" ? "Your matched bets that haven't been completed yet" : "Total matched bets that haven't been completed yet"}
-        />
-      </div>
-
-      {/* Financial Stats Card */}
-      <div className="bg-indigo-600/10 backdrop-blur-lg rounded-xl p-4 space-y-3 border border-indigo-500/20 hover:border-indigo-500/30 transition-all duration-200">
-        <StatItem 
-          icon={{ bg: 'bg-indigo-500/20', dot: 'bg-indigo-400' }}
-          value={`$${stats.financial.totalStaked}`}
-          label="Total Staked"
-          tooltip={statsType === "personal" ? 
-            "For bets you created: your stake amount. For bets you accepted: the required matching amount based on odds" : 
-            "Total amount staked across all users"}
-        />
-        <StatItem 
-          icon={{ bg: 'bg-emerald-500/20', dot: 'bg-emerald-400' }}
-          value={`$${stats.financial.potentialPayout}`}
-          label="Potential Winnings"
-          tooltip={statsType === "personal" ? 
-            "For bets you created: your payout if you win. For bets you accepted: the total pooled amount if you win" : 
-            "Total potential payouts across all active bets"}
-        />
-      </div>
-
-      {/* Enhanced Winnings Card */}
-      <div className="bg-gradient-to-br from-yellow-500/30 to-pink-500/30 backdrop-blur-xl rounded-xl p-6 border-2 border-yellow-500/30 relative overflow-hidden hover:scale-[1.02] transition-transform duration-200 group">
-        <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 via-pink-500/10 to-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-gradient-x"></div>
-        <div className="flex items-center gap-4 relative">
-          <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-yellow-500/30 backdrop-blur-sm">
-            <div className="w-7 h-7 rounded-full bg-yellow-500/30 flex items-center justify-center">
-              <div className="w-3.5 h-3.5 rounded-full bg-yellow-400 animate-pulse"></div>
+      {/* Financial Stats */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Stakes Card */}
+        <div className="bg-gradient-to-br from-blue-600/20 to-blue-900/20 backdrop-blur-lg rounded-xl p-2.5 border border-blue-500/20">
+          <div className="flex flex-col items-center justify-center h-full gap-2">
+            <div className="flex flex-col items-center">
+              <span className="text-xl font-bold text-white">
+                ${stats.financial.totalStaked.toFixed(2)}
+              </span>
+              <span className="text-[10px] text-gray-400 mt-0.5">Staked</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-base font-medium text-emerald-400">
+                ${stats.financial.potentialPayout.toFixed(2)}
+              </span>
+              <span className="text-[10px] text-gray-400 mt-0.5">Potential</span>
             </div>
           </div>
-          <div>
-            <div className="flex items-baseline gap-3">
-              <span className="text-2xl font-bold text-white drop-shadow">${stats.financial.winnings}</span>
-              <span className="text-yellow-400/90 text-sm">•</span>
-              <span className="text-yellow-400/90 text-sm font-medium">{stats.betting.won} Won</span>
+        </div>
+
+        {/* Winnings Card */}
+        <div className="bg-gradient-to-br from-amber-500/20 via-rose-500/20 to-pink-500/20 backdrop-blur-xl rounded-xl p-2.5 border border-amber-500/30">
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-500/30 to-rose-500/30 flex items-center justify-center mb-1">
+              <span className="text-base">🏆</span>
             </div>
-            <span className="text-gray-300/90 text-sm font-medium">
-              {statsType === "personal" ? "Your Total Winnings" : "Total Platform Winnings"}
+            <span className="text-xl font-bold text-white">
+              ${stats.financial.winnings.toFixed(2)}
             </span>
+            <div className="px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 mt-1">
+              <span className="text-xs text-amber-400/90 font-medium">{stats.betting.won} Won</span>
+            </div>
           </div>
-        </div>
-        {statsType === "personal" && stats.rank && (
-          <div className="mt-4 flex items-center gap-2 text-sm text-gray-400">
-            <span>Rank #{stats.rank.position}</span>
-            <span>•</span>
-            <span>Top {stats.rank.percentile}%</span>
-          </div>
-        )}
-        <div className="absolute top-2 right-2 opacity-10 group-hover:opacity-20 transition-opacity">
-          <svg className="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-          </svg>
         </div>
       </div>
+
+      {/* Rank Section */}
+      {statsType === "personal" && stats.rank && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-rose-500/20 to-pink-500/10 backdrop-blur-xl rounded-xl p-2.5 border border-amber-500/20">
+          <div className="flex items-center justify-around">
+            <div className="flex flex-col items-center">
+              <span className="text-lg font-bold text-amber-400/90">#{stats.rank.position}</span>
+            </div>
+            <div className="h-8 w-px bg-gray-700/50"></div>
+            <div className="flex flex-col items-center">
+              <span className="text-lg font-bold text-rose-400/90">Top {stats.rank.percentile}%</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

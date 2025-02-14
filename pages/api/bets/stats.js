@@ -115,17 +115,21 @@ export default async function handler(req, res) {
         }
 
         // Track other global stats
-        if (bet.challengerId) {
-          stats.matched++;
-        } else {
-          stats.created++;
-        }
         if (bet.status === 'completed' && bet.winnerId) {
           stats.won++;
           stats.winnings += bet.payout;
         }
       }
     });
+
+    // After processing all bets, assign aggregate stats based on type
+    if (type === 'personal') {
+      stats.matched = userBets.filter(bet => bet.matchedAt).length;
+    } else {
+      stats.created = userBets.length;
+      stats.matched = userBets.filter(bet => bet.matchedAt).length;
+      stats.completed = userBets.filter(bet => bet.status === 'completed').length;
+    }
 
     // Get user's token balance for personal stats
     const user = type === 'personal' ? 
