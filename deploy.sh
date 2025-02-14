@@ -52,8 +52,15 @@ else
     exit 1
 fi
 
+# Get current branch name
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
 print_status "Pushing to remote repository..."
-git push
+# Try to push, if it fails due to no upstream, set the upstream
+if ! git push; then
+    print_status "Setting upstream branch and pushing..."
+    git push --set-upstream origin $current_branch
+fi
 
 if [ $? -eq 0 ]; then
     print_success "🚀 Deployment successful!"
