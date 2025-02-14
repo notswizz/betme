@@ -38,9 +38,11 @@ export default async function handler(req, res) {
       completed: 0,
       created: 0,
       accepted: 0,
+      won: 0,
       totalStaked: 0,
       potentialPayout: 0,
-      activeBets: 0
+      activeBets: 0,
+      winnings: 0
     };
 
     userBets.forEach(bet => {
@@ -50,8 +52,18 @@ export default async function handler(req, res) {
       // Count created vs accepted bets
       if (bet.userId.toString() === userId) {
         stats.created++;
+        // If user created the bet and won
+        if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
+          stats.won++;
+          stats.winnings += bet.payout;
+        }
       } else if (bet.challengerId?.toString() === userId) {
         stats.accepted++;
+        // If user accepted the bet and won
+        if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
+          stats.won++;
+          stats.winnings += bet.payout;
+        }
       }
 
       // Calculate financial stats
@@ -95,13 +107,15 @@ export default async function handler(req, res) {
           matched: stats.matched,
           completed: stats.completed,
           created: stats.created,
-          accepted: stats.accepted
+          accepted: stats.accepted,
+          won: stats.won
         },
         financial: {
           tokenBalance: user?.tokenBalance || 0,
           totalStaked: stats.totalStaked,
           potentialPayout: stats.potentialPayout,
-          activeBets: stats.activeBets
+          activeBets: stats.activeBets,
+          winnings: stats.winnings
         },
         rank: {
           position: rankIndex + 1,
@@ -113,9 +127,17 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('Error fetching bet stats:', error);
+    // Log more details about the error
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
     return res.status(500).json({ 
       error: 'Failed to fetch bet statistics',
-      details: error.message 
+      details: error.message,
+      code: error.code
     });
   }
 } 
