@@ -49,22 +49,19 @@ export default async function handler(req, res) {
     // Calculate statistics
     const stats = {
       total: userBets.length,
-      pending: 0,
-      matched: 0,
+      pending: 0,  // open/unmatched bets (no matchedAt time)
+      matched: 0,  // total matched bets (both active and completed)
       completed: 0,
       created: 0,
       accepted: 0,
       won: 0,
       totalStaked: 0,
       potentialPayout: 0,
-      activeBets: 0,
+      activeBets: 0,  // bets with matchedAt time but not completed
       winnings: 0
     };
 
     userBets.forEach(bet => {
-      // Count by status
-      stats[bet.status] = (stats[bet.status] || 0) + 1;
-
       if (type === 'personal') {
         // Personal stats calculations
         if (bet.userId.toString() === userId) {
@@ -80,8 +77,44 @@ export default async function handler(req, res) {
             stats.winnings += bet.payout;
           }
         }
+
+        // Calculate financial stats based on matchedAt for personal view
+        if (!bet.matchedAt && bet.userId.toString() === userId) {
+          // Open bets (no matchedAt time) - only count if user created them
+          stats.pending++;
+          stats.totalStaked += bet.stake;
+          stats.potentialPayout += bet.payout;
+        } else if (bet.matchedAt && bet.status !== 'completed') {
+          // Active bets (has matchedAt time but not completed)
+          stats.activeBets++;
+          if (bet.userId.toString() === userId) {
+            // For creator: use their original stake and potential payout
+            stats.totalStaked += bet.stake;
+            stats.potentialPayout += bet.payout;
+          } else if (bet.challengerId?.toString() === userId) {
+            // For challenger: their stake is the creator's payout minus creator's stake
+            const challengerStake = bet.payout - bet.stake;
+            stats.totalStaked += challengerStake;
+            stats.potentialPayout += (bet.stake + challengerStake); // Total pooled amount
+          }
+        }
       } else {
         // Global stats calculations
+        if (!bet.matchedAt) {
+          // Open bets (no matchedAt time)
+          stats.pending++;
+          stats.totalStaked += bet.stake;
+          stats.potentialPayout += bet.payout;
+        } else if (bet.matchedAt && bet.status !== 'completed') {
+          // Active bets (has matchedAt time but not completed)
+          stats.activeBets++;
+          // For global view, count total pooled amount
+          const challengerStake = bet.payout - bet.stake;
+          stats.totalStaked += (bet.stake + challengerStake);
+          stats.potentialPayout += (bet.stake + challengerStake);
+        }
+
+        // Track other global stats
         if (bet.challengerId) {
           stats.matched++;
         } else {
@@ -91,13 +124,6 @@ export default async function handler(req, res) {
           stats.won++;
           stats.winnings += bet.payout;
         }
-      }
-
-      // Calculate financial stats
-      if (bet.status === 'pending' || bet.status === 'matched') {
-        stats.totalStaked += bet.stake;
-        stats.potentialPayout += bet.payout;
-        stats.activeBets++;
       }
     });
 

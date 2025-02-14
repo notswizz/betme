@@ -51,9 +51,12 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (user.tokenBalance < bet.stake) {
+    // Calculate challenger's required stake
+    const challengerStake = bet.payout - bet.stake;
+
+    if (user.tokenBalance < challengerStake) {
       return res.status(400).json({ 
-        error: `Insufficient tokens. Required: ${bet.stake}, Available: ${user.tokenBalance}` 
+        error: `Insufficient tokens. Required: ${challengerStake}, Available: ${user.tokenBalance}` 
       });
     }
 
@@ -71,7 +74,8 @@ export default async function handler(req, res) {
           $set: {
             challengerId: new mongoose.Types.ObjectId(userId),
             status: 'matched',
-            matchedAt: new Date()
+            matchedAt: new Date(),
+            challengerStake: challengerStake
           }
         },
         { new: true, session, runValidators: true }
@@ -90,10 +94,10 @@ export default async function handler(req, res) {
         throw new Error('Bet update verification failed - please try again');
       }
 
-      // Deduct tokens from challenger
+      // Deduct tokens from challenger using the challenger's stake amount
       const updatedUser = await User.findByIdAndUpdate(
         userId,
-        { $inc: { tokenBalance: -bet.stake } },
+        { $inc: { tokenBalance: -challengerStake } },
         { new: true, session }
       );
 
@@ -112,7 +116,8 @@ export default async function handler(req, res) {
         message: 'Bet accepted successfully',
         bet: {
           ...updatedBet.toObject(),
-          challengerId: userId
+          challengerId: userId,
+          challengerStake: challengerStake
         }
       });
 

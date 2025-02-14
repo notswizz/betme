@@ -148,17 +148,33 @@ Parse the user's bet description and return the appropriate JSON structure.`.tri
 
     // Calculate payout if not provided
     if (!betStructure.payout) {
-      betStructure.payout = betStructure.stake * betStructure.odds;
+      const stake = parseFloat(betStructure.stake);
+      const odds = parseInt(betStructure.odds.replace(/[^-\d]/g, ''));
+      
+      if (odds > 0) {
+        // For positive odds: stake * (odds/100)
+        betStructure.payout = stake + (stake * odds / 100);
+      } else {
+        // For negative odds: stake * (100/|odds|)
+        betStructure.payout = stake + (stake * 100 / Math.abs(odds));
+      }
     }
 
-    // Return the structured bet for the BetSlipMessage component
+    // Calculate challenger stake (what they need to put up to match the bet)
+    const challengerStake = betStructure.payout - betStructure.stake;
+
+    // Return the structured bet with both stakes
     return res.status(200).json({
       type: 'betslip',
-      content: betStructure,
+      content: {
+        ...betStructure,
+        challengerStake: parseFloat(challengerStake.toFixed(2))
+      },
       requiresConfirmation: true,
       action: {
         name: 'place_bet',
-        ...betStructure
+        ...betStructure,
+        challengerStake: parseFloat(challengerStake.toFixed(2))
       }
     });
 

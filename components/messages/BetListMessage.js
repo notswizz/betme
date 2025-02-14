@@ -59,7 +59,7 @@ const BetListMessage = ({ bets, onAcceptBet, currentUserId, isMyBets }) => {
                       {/* Teams */}
                       <div className="relative">
                         <div className="space-y-2.5">
-                          <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border border-gray-700/30 group-hover:border-gray-600/30 transition-colors">
+                          <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-green-500/30 group-hover:border-green-500/50 transition-colors">
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium text-white">
                                 {bet.team1}
@@ -69,27 +69,35 @@ const BetListMessage = ({ bets, onAcceptBet, currentUserId, isMyBets }) => {
                               {bet.odds}
                             </div>
                           </div>
-                          <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border border-gray-700/30 group-hover:border-gray-600/30 transition-colors">
+                          <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-red-500/30 group-hover:border-red-500/50 transition-colors">
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium text-white">
                                 {bet.team2}
                               </div>
                             </div>
                             <div className="text-xs text-blue-400 font-medium px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20">
-                              Line: {bet.line}
+                              Line: {bet.line === 'ML' ? 'ML' : 
+                                isNaN(bet.line) ? bet.line :
+                                parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line}
                             </div>
                           </div>
                         </div>
 
                         {/* Stakes */}
-                        <div className="mt-3.5 flex items-center justify-between text-xs py-2 px-3 rounded-lg bg-gray-800/50 border border-gray-700/30">
-                          <div>
-                            <span className="text-gray-500">Stake:</span>
-                            <span className="ml-2 text-white font-medium">${bet.stake}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Payout:</span>
-                            <span className="ml-2 text-green-400 font-medium">${bet.payout}</span>
+                        <div className="mt-3.5 space-y-2">
+                          <div className="flex items-center justify-between py-2.5 px-3.5 rounded-lg bg-gray-800/50 border border-gray-700/30">
+                            <div>
+                              <div className="text-gray-500 text-xs mb-0.5">Stake</div>
+                              <div className="text-white font-semibold text-base">
+                                ${bet.userId.toString() === currentUserId ? 
+                                  bet.stake : 
+                                  (bet.payout - bet.stake).toFixed(2)}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-gray-500 text-xs mb-0.5">Total Payout</div>
+                              <div className="text-green-400 font-semibold text-base">${bet.payout}</div>
+                            </div>
                           </div>
                         </div>
                       </div>

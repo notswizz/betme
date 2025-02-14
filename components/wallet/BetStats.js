@@ -140,13 +140,13 @@ export default function BetStats() {
           icon={{ bg: 'bg-blue-500/20', dot: 'bg-blue-400' }}
           value={stats.betting.pending}
           label="Open Bets"
-          tooltip={statsType === "personal" ? "Bets you've created that are waiting to be matched" : "Total open bets waiting to be matched"}
+          tooltip={statsType === "personal" ? "Your unmatched bets waiting to be accepted" : "Total unmatched bets waiting to be accepted"}
         />
         <StatItem 
           icon={{ bg: 'bg-orange-500/20', dot: 'bg-orange-400' }}
           value={stats.financial.activeBets}
           label="Active Bets"
-          tooltip={statsType === "personal" ? "Your matched bets that are currently in progress" : "Total matched bets currently in progress"}
+          tooltip={statsType === "personal" ? "Your matched bets that haven't been completed yet" : "Total matched bets that haven't been completed yet"}
         />
       </div>
 
@@ -156,13 +156,17 @@ export default function BetStats() {
           icon={{ bg: 'bg-indigo-500/20', dot: 'bg-indigo-400' }}
           value={`$${stats.financial.totalStaked}`}
           label="Total Staked"
-          tooltip={statsType === "personal" ? "Total amount of tokens you've staked" : "Total amount staked across all users"}
+          tooltip={statsType === "personal" ? 
+            "For bets you created: your stake amount. For bets you accepted: the required matching amount based on odds" : 
+            "Total amount staked across all users"}
         />
         <StatItem 
           icon={{ bg: 'bg-emerald-500/20', dot: 'bg-emerald-400' }}
           value={`$${stats.financial.potentialPayout}`}
           label="Potential Winnings"
-          tooltip={statsType === "personal" ? "Maximum amount you could win from your active bets" : "Total potential winnings across all active bets"}
+          tooltip={statsType === "personal" ? 
+            "For bets you created: your payout if you win. For bets you accepted: the total pooled amount if you win" : 
+            "Total potential payouts across all active bets"}
         />
       </div>
 
