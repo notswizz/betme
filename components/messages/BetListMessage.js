@@ -26,13 +26,13 @@ const BetListMessage = ({ bets, onAcceptBet, currentUserId, isMyBets }) => {
   }
 
   return (
-    <div className="w-full max-w-full mx-auto">
+    <div className="w-full max-w-full mx-auto mt-12 mb-6">
       {/* Horizontal scrolling container with snap scrolling */}
-      <div className="relative w-full">
-        <div className="overflow-x-auto scrollbar-hide">
-          <div className="flex gap-3 snap-x snap-mandatory min-w-0 px-4 pb-4 mx-auto max-w-[calc(100vw-2rem)]">
+      <div className="relative w-full pt-2">
+        <div className="overflow-x-auto overflow-y-visible scrollbar-hide">
+          <div className="flex gap-3 snap-x snap-mandatory min-w-0 px-4 pb-4 pt-1 mx-auto max-w-[calc(100vw-2rem)]">
             {parsedBets.map((bet) => (
-              <div key={bet._id} className="snap-center flex-none w-[280px] first:ml-0">
+              <div key={bet._id} className="snap-center flex-none w-[280px] first:ml-0 pt-0.5">
                 <div className="relative group">
                   {/* Animated border effect */}
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-xl opacity-30 group-hover:opacity-100 blur transition duration-500 group-hover:duration-200 animate-gradient-xy"></div>
@@ -40,7 +40,7 @@ const BetListMessage = ({ bets, onAcceptBet, currentUserId, isMyBets }) => {
                   {/* Card content */}
                   <div className="relative bg-gradient-to-br from-gray-900/95 via-gray-900 to-gray-800/95 backdrop-blur-xl rounded-xl h-full">
                     {/* Top Section with Sport and Type */}
-                    <div className="px-3 py-2 border-b border-gray-700/30 bg-gradient-to-r from-gray-800/80 via-gray-900/80 to-gray-800/80 rounded-t-xl flex items-center justify-between">
+                    <div className="px-3 py-3 border-b border-gray-700/30 bg-gradient-to-r from-gray-800/80 via-gray-900/80 to-gray-800/80 rounded-t-xl flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <div className="flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
@@ -55,48 +55,48 @@ const BetListMessage = ({ bets, onAcceptBet, currentUserId, isMyBets }) => {
                     </div>
 
                     {/* Main Content */}
-                    <div className="p-2.5">
+                    <div className="p-4">
                       {/* Teams */}
                       <div className="relative">
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between gap-2 bg-gray-800/30 p-1.5 rounded-lg border border-gray-700/30 group-hover:border-gray-600/30 transition-colors">
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border border-gray-700/30 group-hover:border-gray-600/30 transition-colors">
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium text-white">
                                 {bet.team1}
                               </div>
                             </div>
-                            <div className="text-green-400 text-sm font-bold whitespace-nowrap px-2 py-0.5 rounded bg-green-500/10 border border-green-500/20">
+                            <div className="text-green-400 text-sm font-bold whitespace-nowrap px-2.5 py-1 rounded bg-green-500/10 border border-green-500/20">
                               {bet.odds}
                             </div>
                           </div>
-                          <div className="flex items-center justify-between gap-2 bg-gray-800/30 p-1.5 rounded-lg border border-gray-700/30 group-hover:border-gray-600/30 transition-colors">
+                          <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border border-gray-700/30 group-hover:border-gray-600/30 transition-colors">
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium text-white">
                                 {bet.team2}
                               </div>
                             </div>
-                            <div className="text-xs text-blue-400 font-medium px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                            <div className="text-xs text-blue-400 font-medium px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20">
                               Line: {bet.line}
                             </div>
                           </div>
                         </div>
 
                         {/* Stakes */}
-                        <div className="mt-2 flex items-center justify-between text-xs py-1.5 px-2 rounded-lg bg-gray-800/50 border border-gray-700/30">
+                        <div className="mt-3.5 flex items-center justify-between text-xs py-2 px-3 rounded-lg bg-gray-800/50 border border-gray-700/30">
                           <div>
                             <span className="text-gray-500">Stake:</span>
-                            <span className="ml-1.5 text-white font-medium">${bet.stake}</span>
+                            <span className="ml-2 text-white font-medium">${bet.stake}</span>
                           </div>
                           <div>
                             <span className="text-gray-500">Payout:</span>
-                            <span className="ml-1.5 text-green-400 font-medium">${bet.payout}</span>
+                            <span className="ml-2 text-green-400 font-medium">${bet.payout}</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Action Section */}
-                    <div className="px-2.5 pb-2.5">
+                    <div className="px-4 pb-4">
                       {bet.status === 'pending' && bet.userId !== currentUserId ? (
                         <button
                           onClick={() => handleAcceptBet(bet)}

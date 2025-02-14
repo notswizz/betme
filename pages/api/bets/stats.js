@@ -20,6 +20,9 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    // Get stats type from query
+    const { type = 'personal' } = req.query;
+
     // Convert userId to ObjectId
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
@@ -29,13 +32,19 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Get all user's bets (both as creator and challenger)
-    const userBets = await Bet.find({
-      $or: [
-        { userId: userObjectId },
-        { challengerId: userObjectId }
-      ]
-    }).lean();
+    let userBets;
+    if (type === 'personal') {
+      // Get all user's bets (both as creator and challenger)
+      userBets = await Bet.find({
+        $or: [
+          { userId: userObjectId },
+          { challengerId: userObjectId }
+        ]
+      }).lean();
+    } else {
+      // Get all bets for global stats
+      userBets = await Bet.find({}).lean();
+    }
 
     // Calculate statistics
     const stats = {
@@ -56,18 +65,29 @@ export default async function handler(req, res) {
       // Count by status
       stats[bet.status] = (stats[bet.status] || 0) + 1;
 
-      // Count created vs accepted bets
-      if (bet.userId.toString() === userId) {
-        stats.created++;
-        // If user created the bet and won
-        if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
-          stats.won++;
-          stats.winnings += bet.payout;
+      if (type === 'personal') {
+        // Personal stats calculations
+        if (bet.userId.toString() === userId) {
+          stats.created++;
+          if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
+            stats.won++;
+            stats.winnings += bet.payout;
+          }
+        } else if (bet.challengerId?.toString() === userId) {
+          stats.accepted++;
+          if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
+            stats.won++;
+            stats.winnings += bet.payout;
+          }
         }
-      } else if (bet.challengerId?.toString() === userId) {
-        stats.accepted++;
-        // If user accepted the bet and won
-        if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
+      } else {
+        // Global stats calculations
+        if (bet.challengerId) {
+          stats.matched++;
+        } else {
+          stats.created++;
+        }
+        if (bet.status === 'completed' && bet.winnerId) {
           stats.won++;
           stats.winnings += bet.payout;
         }
@@ -81,10 +101,12 @@ export default async function handler(req, res) {
       }
     });
 
-    // Get user's token balance
-    const user = await User.findById(userId).select('tokenBalance').lean();
+    // Get user's token balance for personal stats
+    const user = type === 'personal' ? 
+      await User.findById(userId).select('tokenBalance').lean() :
+      { tokenBalance: 0 };
 
-    // Get user's rank based on total bets
+    // Get rank statistics
     const userRank = await Bet.aggregate([
       {
         $group: {
@@ -101,9 +123,9 @@ export default async function handler(req, res) {
       { $sort: { totalBets: -1 } }
     ]);
 
-    const rankIndex = userRank.findIndex(rank => 
-      rank._id.toString() === userId
-    );
+    const rankIndex = type === 'personal' ?
+      userRank.findIndex(rank => rank._id.toString() === userId) :
+      -1;
 
     return res.status(200).json({
       success: true,
@@ -124,17 +146,16 @@ export default async function handler(req, res) {
           activeBets: stats.activeBets,
           winnings: stats.winnings
         },
-        rank: {
+        rank: type === 'personal' ? {
           position: rankIndex + 1,
           totalUsers: userRank.length,
           percentile: Math.round(((userRank.length - (rankIndex + 1)) / userRank.length) * 100)
-        }
+        } : null
       }
     });
 
   } catch (error) {
     console.error('Error fetching bet stats:', error);
-    // Log more details about the error
     console.error('Error details:', {
       name: error.name,
       message: error.message,

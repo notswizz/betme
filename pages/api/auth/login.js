@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       { 
         userId: user._id,
         email: user.email,
-        // Don't include sensitive info like password
+        username: user.username
       },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
@@ -40,7 +40,8 @@ export default async function handler(req, res) {
       token,
       user: {
         id: user._id,
-        email: user.email
+        email: user.email,
+        username: user.username
       }
     });
   } catch (error) {

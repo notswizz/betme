@@ -28,7 +28,7 @@ export function getAuthToken() {
   }
 }
 
-export function getCurrentUserId() {
+export function getCurrentUserInfo() {
   try {
     if (typeof window === 'undefined') return null;
     const token = getAuthToken();
@@ -38,11 +38,25 @@ export function getCurrentUserId() {
     if (parts.length !== 3) return null;
 
     const payload = JSON.parse(atob(parts[1]));
-    return payload.userId || null;
+    return {
+      userId: payload.userId || null,
+      username: payload.username || null,
+      email: payload.email || null
+    };
   } catch (error) {
-    console.error('Error getting current user ID:', error);
+    console.error('Error getting current user info:', error);
     return null;
   }
+}
+
+export function getCurrentUserId() {
+  const userInfo = getCurrentUserInfo();
+  return userInfo?.userId || null;
+}
+
+export function getCurrentUsername() {
+  const userInfo = getCurrentUserInfo();
+  return userInfo?.username || null;
 }
 
 export function isAuthenticated() {

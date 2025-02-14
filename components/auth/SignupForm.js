@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 export default function SignupForm({ onSuccess }) {
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -32,6 +33,7 @@ export default function SignupForm({ onSuccess }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          username: formData.username,
           email: formData.email,
           password: formData.password
         }),
@@ -67,6 +69,23 @@ export default function SignupForm({ onSuccess }) {
         )}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-1.5">
+              Username
+            </label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autoComplete="username"
+              required
+              value={formData.username}
+              onChange={handleChange}
+              className="w-full px-4 py-2.5 bg-gray-800/50 border border-gray-700/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all duration-200"
+              placeholder="Choose a username"
+            />
+          </div>
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1.5">
               Email address
