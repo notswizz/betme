@@ -4,23 +4,23 @@ export default function QuickActions({ onAction }) {
   const actions = [
     {
       message: "I want to place a bet",
-      icon: "🎯", 
-      label: "Place a Bet"
+      icon: "🎯",
+      label: "Place Bet"
     },
     {
-      message: "Show me my open bets",
+      message: "Show me open bets",
+      icon: "🎲",
+      label: "Open Bets" 
+    },
+    {
+      message: "Show me my bets",
       icon: "📊",
-      label: "View Bets"
+      label: "My Bets"
     },
     {
-      message: "Show me the FAQ",
-      icon: "❓",
-      label: "FAQ"
-    },
-    {
-      message: "Show me today's best bets",
-      icon: "🔥",
-      label: "Best Bets"
+      message: "How does this work?",
+      icon: "❓", 
+      label: "WTF?"
     }
   ];
 
