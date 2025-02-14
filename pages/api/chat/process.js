@@ -232,6 +232,7 @@ async function getBets(userId, action = 'view_open_bets') {
 
     // Create base query
     let query = {};
+    let messageText = '';
     
     // Build query based on action
     switch (action) {
@@ -240,6 +241,15 @@ async function getBets(userId, action = 'view_open_bets') {
           $or: [
             { userId: userObjectId, status: { $in: ['pending', 'matched'] } },
             { challengerId: userObjectId, status: 'matched' }
+          ]
+        };
+        break;
+      case 'view_matched_bets_to_judge':
+        query = {
+          status: 'matched',
+          $or: [
+            { userId: userObjectId },
+            { challengerId: userObjectId }
           ]
         };
         break;
@@ -253,12 +263,6 @@ async function getBets(userId, action = 'view_open_bets') {
         };
         break;
       default: // view_open_bets
-        // First, let's check all pending bets
-        console.log('Checking all pending bets...');
-        const allPendingBets = await Bet.find({ status: 'pending' }).lean();
-        console.log('All pending bets:', JSON.stringify(allPendingBets, null, 2));
-        
-        // Then use our actual query
         query = {
           status: 'pending',
           userId: { $ne: userObjectId },
@@ -268,94 +272,68 @@ async function getBets(userId, action = 'view_open_bets') {
 
     console.log('Final query:', JSON.stringify(query, null, 2));
     
-    try {
-      // Get bets with query and sort by most recent first
-      const bets = await Bet.find(query)
-        .sort({ createdAt: -1 })
-        .populate('userId', 'username')
-        .populate('challengerId', 'username')
-        .lean();
-      
-      console.log('Raw bets from query:', JSON.stringify(bets, null, 2));
+    // Get bets with query and sort by most recent first
+    const bets = await Bet.find(query)
+      .sort({ createdAt: -1 })
+      .populate('userId', 'username')
+      .populate('challengerId', 'username')
+      .lean();
+    
+    console.log('Raw bets from query:', JSON.stringify(bets, null, 2));
 
-      // Format the bets
-      const formattedBets = bets.map(bet => ({
-        _id: bet._id.toString(),
-        userId: bet.userId._id ? bet.userId._id.toString() : bet.userId.toString(),
-        userUsername: bet.userId.username || 'Unknown User',
-        challengerId: bet.challengerId ? (bet.challengerId._id ? bet.challengerId._id.toString() : bet.challengerId.toString()) : null,
-        challengerUsername: bet.challengerId ? (bet.challengerId.username || 'Unknown Challenger') : null,
-        type: bet.type || 'Moneyline',
-        sport: bet.sport || 'NBA',
-        team1: bet.team1,
-        team2: bet.team2,
-        line: bet.line || 'ML',
-        odds: bet.odds,
-        stake: parseFloat(bet.stake).toFixed(2),
-        payout: parseFloat(bet.payout).toFixed(2),
-        status: bet.status,
-        createdAt: new Date(bet.createdAt).toLocaleString(),
-        matchedAt: bet.matchedAt ? new Date(bet.matchedAt).toLocaleString() : null
-      }));
+    // Format the bets
+    const formattedBets = bets.map(bet => ({
+      _id: bet._id.toString(),
+      userId: bet.userId._id ? bet.userId._id.toString() : bet.userId.toString(),
+      userUsername: bet.userId.username || 'Unknown User',
+      challengerId: bet.challengerId ? (bet.challengerId._id ? bet.challengerId._id.toString() : bet.challengerId.toString()) : null,
+      challengerUsername: bet.challengerId ? (bet.challengerId.username || 'Unknown Challenger') : null,
+      type: bet.type || 'Moneyline',
+      sport: bet.sport || 'NBA',
+      team1: bet.team1,
+      team2: bet.team2,
+      line: bet.line || 'ML',
+      odds: bet.odds,
+      stake: parseFloat(bet.stake).toFixed(2),
+      payout: parseFloat(bet.payout).toFixed(2),
+      status: bet.status,
+      createdAt: new Date(bet.createdAt).toLocaleString(),
+      matchedAt: bet.matchedAt ? new Date(bet.matchedAt).toLocaleString() : null
+    }));
 
-      // Get appropriate message text
-      let messageText;
-      switch (action) {
-        case 'view_my_bets':
-          messageText = formattedBets.length > 0 
-            ? 'Here are your bets:' 
-            : "You haven't placed any bets yet. Would you like to place one?";
-          break;
-        case 'view_matched_bets':
-          messageText = formattedBets.length > 0 
-            ? 'Here are your matched/accepted bets:' 
-            : "You don't have any matched bets yet. Try accepting an open bet or wait for someone to accept yours!";
-          break;
-        default:
-          messageText = formattedBets.length > 0 
-            ? 'Here are the available open bets you can accept:' 
-            : 'No open bets available at the moment. Would you like to create one?';
-      }
-
-      return {
-        success: true,
-        message: {
-          role: 'assistant',
-          type: 'bet_list',
-          content: formattedBets,
-          text: messageText
-        }
-      };
-    } catch (error) {
-      console.error('Error querying bets:', error);
-      // If there's a population error, try without population
-      if (error.message.includes('Cannot populate')) {
-        const bets = await Bet.find(query).sort({ createdAt: -1 }).lean();
-        return {
-          success: true,
-          message: {
-            role: 'assistant',
-            type: 'bet_list',
-            content: bets.map(bet => ({
-              _id: bet._id.toString(),
-              userId: bet.userId.toString(),
-              type: bet.type || 'Moneyline',
-              sport: bet.sport || 'NBA',
-              team1: bet.team1,
-              team2: bet.team2,
-              line: bet.line || 'ML',
-              odds: bet.odds,
-              stake: parseFloat(bet.stake).toFixed(2),
-              payout: parseFloat(bet.payout).toFixed(2),
-              status: bet.status,
-              createdAt: new Date(bet.createdAt).toLocaleString()
-            })),
-            text: 'Here are the bets (note: user details temporarily unavailable)'
-          }
-        };
-      }
-      throw error;
+    // Get appropriate message text
+    switch (action) {
+      case 'view_my_bets':
+        messageText = formattedBets.length > 0 
+          ? 'Here are your bets:' 
+          : "You haven't placed any bets yet. Would you like to place one?";
+        break;
+      case 'view_matched_bets_to_judge':
+        messageText = formattedBets.length > 0 
+          ? 'Here are your matched bets that need judging. Select the winning team for each bet:' 
+          : "You don't have any matched bets that need judging.";
+        break;
+      case 'view_matched_bets':
+        messageText = formattedBets.length > 0 
+          ? 'Here are your matched bets:' 
+          : "You don't have any matched bets yet.";
+        break;
+      default:
+        messageText = formattedBets.length > 0 
+          ? 'Here are the available open bets you can accept:' 
+          : 'No open bets available at the moment. Would you like to create one?';
     }
+
+    return {
+      success: true,
+      message: {
+        role: 'assistant',
+        type: 'bet_list',
+        content: formattedBets,
+        text: messageText
+      }
+    };
+
   } catch (error) {
     console.error('Error fetching bets:', error);
     return {

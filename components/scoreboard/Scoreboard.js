@@ -47,7 +47,7 @@ export default function Scoreboard() {
 
   // Set up auto-refresh every 30 seconds
   useEffect(() => {
-    const interval = setInterval(fetchGames, 30000);
+    const interval = setInterval(fetchGames, 300000);
     return () => clearInterval(interval);
   }, [fetchGames]);
 

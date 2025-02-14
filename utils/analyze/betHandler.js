@@ -44,7 +44,9 @@ export function handleViewBetsIntent(content = '', conversationalResponse = '') 
   const lowerContent = content.toLowerCase();
   
   // First check for specific bet types - these take precedence
-  if (lowerContent.includes('my') || lowerContent.includes('mine')) {
+  if (lowerContent.includes('judge') || lowerContent.includes('complete')) {
+    action = 'view_matched_bets_to_judge';
+  } else if (lowerContent.includes('my') || lowerContent.includes('mine')) {
     action = 'view_my_bets';
   } else if (lowerContent.includes('accept') || lowerContent.includes('match')) {
     action = 'view_matched_bets';
@@ -52,11 +54,11 @@ export function handleViewBetsIntent(content = '', conversationalResponse = '') 
     action = 'view_open_bets';
   } else if (lowerContent.includes('all')) {
     // Only use 'all' if no other specific type was requested
-    // This prevents 'all' from overriding more specific requests
     if (!lowerContent.includes('match') && !lowerContent.includes('accept') && 
         !lowerContent.includes('my') && !lowerContent.includes('mine') &&
-        !lowerContent.includes('open')) {
-      action = 'view_open_bets'; // Default to open bets for 'all'
+        !lowerContent.includes('open') && !lowerContent.includes('judge') &&
+        !lowerContent.includes('complete')) {
+      action = 'view_open_bets';
     }
   }
   

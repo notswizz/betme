@@ -93,6 +93,8 @@ export async function analyzeConversation(messages, options = {}) {
       
       if (lowerContent.includes('my') || lowerContent.includes('mine')) {
         action = 'view_my_bets';
+      } else if (lowerContent.includes('judge') || lowerContent.includes('complete')) {
+        action = 'view_matched_bets_to_judge';
       } else if (lowerContent.includes('accept') || lowerContent.includes('match')) {
         action = 'view_matched_bets';
       } else if (lowerContent.includes('open')) {
@@ -101,7 +103,7 @@ export async function analyzeConversation(messages, options = {}) {
         // Only use 'all' if no other specific type was requested
         if (!lowerContent.includes('match') && !lowerContent.includes('accept') && 
             !lowerContent.includes('my') && !lowerContent.includes('mine') &&
-            !lowerContent.includes('open')) {
+            !lowerContent.includes('open') && !lowerContent.includes('judge')) {
           action = 'view_open_bets';
         }
       }

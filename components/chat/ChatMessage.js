@@ -27,6 +27,63 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, gam
   const isUser = role === 'user';
   const currentUserId = getCurrentUserId();
 
+  const handleAcceptBet = async (bet) => {
+    try {
+      const response = await fetch('/api/actions/acceptBet', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ betId: bet._id })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to accept bet');
+      
+      // Refresh the page or update UI as needed
+      window.location.reload();
+    } catch (error) {
+      console.error('Error accepting bet:', error);
+      alert(error.message);
+    }
+  };
+
+  const handleCompleteBet = async (betId, team) => {
+    try {
+      const response = await fetch('/api/bets/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ betId, team })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Handle specific error cases
+        if (data.error === 'You have already voted on this bet') {
+          alert('You have already voted on this bet. You can only vote once.');
+        } else {
+          alert(data.error || 'Failed to vote on bet. Please try again.');
+        }
+        return;
+      }
+      
+      // Show success message with vote counts
+      const voteCounts = data.bet.voteCounts;
+      alert(`Vote recorded successfully!\nCurrent votes:\n${team}: ${voteCounts[team]}\n${team === data.bet.team1 ? data.bet.team2 : data.bet.team1}: ${voteCounts[team === data.bet.team1 ? data.bet.team2 : data.bet.team1]}`);
+      
+      // Refresh the page or update UI as needed
+      window.location.reload();
+    } catch (error) {
+      console.error('Error voting on bet:', error);
+      alert('An error occurred while voting. Please try again.');
+    }
+  };
+
   const renderMessageContent = () => {
     // Handle player stats content specially
     if (content && typeof content === 'object' && 'firstName' in content) {
@@ -43,7 +100,13 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, gam
       case 'bet_list':
         // Parse the content if it's a string
         const bets = typeof content === 'string' ? JSON.parse(content) : content;
-        return <BetListMessage bets={bets} onAcceptBet={onAcceptBet} currentUserId={currentUserId} />;
+        return <BetListMessage 
+          bets={bets} 
+          onAcceptBet={handleAcceptBet}
+          onCompleteBet={handleCompleteBet}
+          currentUserId={currentUserId}
+          isMyBets={message.action === 'view_my_bets'}
+        />;
       case 'image':
         return <ImagePreview image={content} onUpload={onImageUpload} />;
       case 'betslip':
