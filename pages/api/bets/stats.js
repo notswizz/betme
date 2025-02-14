@@ -1,10 +1,8 @@
 import { verifyToken } from '@/utils/auth';
 import connectDB from '@/utils/mongodb';
+import User from '@/models/User';
+import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
-
-// Import schemas instead of models
-import { UserSchema } from '@/models/User';
-import { BetSchema } from '@/models/Bet';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -12,11 +10,8 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Connect to database first
     await connectDB();
-
-    // Ensure models are registered
-    const User = mongoose.models.User || mongoose.model('User', UserSchema);
-    const Bet = mongoose.models.Bet || mongoose.model('Bet', BetSchema);
 
     // Get user ID from token
     const token = req.headers.authorization?.split(' ')[1];
@@ -27,6 +22,12 @@ export default async function handler(req, res) {
 
     // Convert userId to ObjectId
     const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    // Verify user exists
+    const userExists = await User.findById(userId);
+    if (!userExists) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     // Get all user's bets (both as creator and challenger)
     const userBets = await Bet.find({

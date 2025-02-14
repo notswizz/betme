@@ -1,8 +1,18 @@
 import mongoose from 'mongoose';
 
+// Delete the model if it exists to force schema recompilation
+if (mongoose.models.User) {
+  delete mongoose.models.User;
+}
+
 // Define the schema
 const UserSchema = new mongoose.Schema({
   email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  username: {
     type: String,
     required: true,
     unique: true
@@ -13,7 +23,7 @@ const UserSchema = new mongoose.Schema({
   },
   tokenBalance: {
     type: Number,
-    default: 0
+    default: 1000
   },
   createdAt: {
     type: Date,
@@ -21,6 +31,6 @@ const UserSchema = new mongoose.Schema({
   }
 });
 
-// Export both schema and model
-export { UserSchema };
-export default mongoose.models.User || mongoose.model('User', UserSchema); 
+// Create and export the model
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
+export default User; 

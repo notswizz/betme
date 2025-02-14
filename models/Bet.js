@@ -38,7 +38,7 @@ const BetSchema = new mongoose.Schema({
     required: true
   },
   odds: {
-    type: Number,
+    type: String,
     required: true
   },
   stake: {
@@ -54,7 +54,7 @@ const BetSchema = new mongoose.Schema({
     enum: ['pending', 'matched', 'completed', 'cancelled'],
     default: 'pending'
   },
-  winner: {
+  winnerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null
@@ -69,6 +69,6 @@ const BetSchema = new mongoose.Schema({
   }
 });
 
-// Export both schema and model
-export { BetSchema };
-export default mongoose.models.Bet || mongoose.model('Bet', BetSchema); 
+// Create and export the model
+const Bet = mongoose.models.Bet || mongoose.model('Bet', BetSchema);
+export default Bet; 
