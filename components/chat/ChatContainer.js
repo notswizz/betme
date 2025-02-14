@@ -292,15 +292,7 @@ export default function ChatContainer() {
       />
       
       <div className="flex-1 flex flex-col h-full relative">
-        <Header onLogout={handleLogout}>
-          <MobileMenuButton 
-            isOpen={isSideMenuOpen}
-            className="mobile-menu-button" 
-            onClick={() => {
-              setIsSideMenuOpen(!isSideMenuOpen);
-            }}
-          />
-        </Header>
+        <Header onLogout={handleLogout} onMenuToggle={() => setIsSideMenuOpen(!isSideMenuOpen)} />
         
         <ChatArea
           messages={messages}
