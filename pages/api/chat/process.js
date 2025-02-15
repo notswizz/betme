@@ -434,14 +434,8 @@ async function handleBetConfirmation(userId, betData) {
 
 // Main API route handler
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  try {
-    // Connect to database and ensure models are registered
+  if (req.method === 'POST') {
     await connectDB();
-    const { User, Bet } = await ensureModels();
 
     // Get user ID from token
     const token = req.headers.authorization?.split(' ')[1];
@@ -587,11 +581,8 @@ export default async function handler(req, res) {
       conversationId: conversation._id.toString()
     });
 
-  } catch (error) {
-    console.error('Error in chat process:', error);
-    return res.status(500).json({ 
-      error: error.message || 'Internal server error',
-      details: error.toString()
-    });
+  } else {
+    res.setHeader('Allow', ['POST']);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 } 
