@@ -7,12 +7,14 @@ import { ObjectId } from 'mongodb';
 import { handleNormalChat } from '@/pages/api/actions/chat';
 import { checkBalance } from '@/pages/api/actions/balance';
 import { getListings } from '@/pages/api/actions/listing';
-import User from '@/models/User';
+import getUserModel from '@/models/User';
 import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 import { getPlayerStats, getTeamNextGame, handleBasketballQuery, fetchPlayerStatistics } from '@/utils/nbaApi';
 
 import { ensureModels } from '@/utils/models';
+
+const User = getUserModel();
 
 console.log('User model:', User); // Check if User model is defined
 
