@@ -55,24 +55,76 @@ export default function BetStats() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        
         const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
+        if (!token) {
+          setError('Not authenticated');
+          return;
+        }
+
         const response = await fetch(`/api/bets/stats?type=${statsType}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
+
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Failed to fetch stats');
-        setStats(data.stats);
+        
+        // Check if the response contains the expected data structure
+        if (!response.ok || !data.stats) {
+          console.error('Invalid response:', data);
+          throw new Error(data.error || 'Failed to fetch stats');
+        }
+
+        // Initialize default values for missing fields
+        const defaultStats = {
+          betting: {
+            total: 0,
+            pending: 0,
+            matched: 0,
+            completed: 0,
+            created: 0,
+            accepted: 0,
+            won: 0
+          },
+          financial: {
+            tokenBalance: 0,
+            totalStaked: 0,
+            potentialPayout: 0,
+            activeBets: 0,
+            winnings: 0
+          },
+          rank: statsType === 'personal' ? {
+            position: 0,
+            totalUsers: 0,
+            percentile: 0
+          } : null
+        };
+
+        // Merge received stats with default values
+        setStats({
+          betting: { ...defaultStats.betting, ...data.stats.betting },
+          financial: { ...defaultStats.financial, ...data.stats.financial },
+          rank: statsType === 'personal' ? 
+            { ...defaultStats.rank, ...data.stats.rank } : 
+            null
+        });
+
       } catch (err) {
         console.error('Error fetching stats:', err);
-        setError(err.message);
+        setError(err.message || 'Failed to fetch statistics');
       } finally {
         setLoading(false);
       }
     };
+
     fetchStats();
   }, [statsType]);
 
+  // Show loading state
   if (loading) {
     return (
       <div className="space-y-4">
@@ -99,7 +151,27 @@ export default function BetStats() {
     );
   }
 
-  if (error || !stats) return null;
+  // Show error state
+  if (error) {
+    return (
+      <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+        <p className="text-red-400 text-sm text-center">
+          {error}
+        </p>
+      </div>
+    );
+  }
+
+  // Show empty state if no stats
+  if (!stats) {
+    return (
+      <div className="bg-gray-900/90 rounded-xl p-4">
+        <p className="text-gray-400 text-sm text-center">
+          No statistics available
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">

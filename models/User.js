@@ -11,14 +11,14 @@ const UserSchema = new mongoose.Schema({
 
 // Create a more robust model registration function
 const getModel = () => {
-  try {
-    // Try to get existing model
-    return mongoose.model('User');
-  } catch {
-    // If model doesn't exist, define and return it
-    return mongoose.model('User', UserSchema);
+  if (mongoose.models.User) {
+    return mongoose.models.User;
   }
+  
+  return mongoose.model('User', UserSchema);
 };
 
-// Export the model getter
-export default getModel; 
+// Export both the model getter and the schema
+export const User = getModel();
+export const Schema = UserSchema;
+export default User; 

@@ -1,62 +1,38 @@
-import User from '@/models/User';
-import mongoose from 'mongoose';
 import { verifyToken } from '@/utils/auth';
 import connectDB from '@/utils/mongodb';
+import { User } from '@/models/User';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST' && req.method !== 'GET') {
+  if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     await connectDB();
-    
-    // Get auth header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing or invalid authorization header' });
-    }
 
-    // Extract and verify token
-    const token = authHeader.split(' ')[1];
+    const token = req.headers.authorization?.split(' ')[1];
     const userId = await verifyToken(token);
+    
     if (!userId) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Find user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (req.method === 'GET') {
-      return res.status(200).json({ balance: user.tokenBalance });
-    }
-
-    // Handle POST - add tokens
-    const { amount } = req.body;
-    
-    // Validate amount
-    if (!amount || isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ error: 'Invalid amount' });
-    }
-
-    // Update balance
-    user.tokenBalance += Number(amount);
-    await user.save();
-
-    return res.status(200).json({ 
-      balance: user.tokenBalance,
-      message: `Successfully added ${amount} tokens to your balance`
+    return res.status(200).json({
+      success: true,
+      balance: user.tokenBalance
     });
 
   } catch (error) {
-    console.error('Balance management error:', error);
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    return res.status(500).json({ error: 'Error managing balance' });
+    console.error('Error fetching balance:', error);
+    return res.status(500).json({ 
+      error: 'Failed to fetch balance',
+      details: error.message
+    });
   }
 }
 

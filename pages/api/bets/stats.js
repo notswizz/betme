@@ -1,6 +1,6 @@
 import { verifyToken } from '@/utils/auth';
 import connectDB from '@/utils/mongodb';
-import User from '@/models/User';
+import { User } from '@/models/User';
 import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 
@@ -32,170 +32,172 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    let userBets;
-    if (type === 'personal') {
-      // Get all user's bets (both as creator and challenger)
-      userBets = await Bet.find({
-        $or: [
-          { userId: userObjectId },
-          { challengerId: userObjectId }
-        ]
-      }).lean();
-    } else {
-      // Get all bets for global stats
-      userBets = await Bet.find({}).lean();
-    }
-
-    // Calculate statistics
-    const stats = {
-      total: userBets.length,
-      pending: 0,  // open/unmatched bets (no matchedAt time)
-      matched: 0,  // total matched bets (both active and completed)
-      completed: 0,
-      created: 0,
-      accepted: 0,
-      won: 0,
-      totalStaked: 0,
-      potentialPayout: 0,
-      activeBets: 0,  // bets with matchedAt time but not completed
-      winnings: 0
+    // Initialize default stats
+    const defaultStats = {
+      betting: {
+        total: 0,
+        pending: 0,
+        matched: 0,
+        completed: 0,
+        created: 0,
+        accepted: 0,
+        won: 0
+      },
+      financial: {
+        tokenBalance: userExists.tokenBalance || 0,
+        totalStaked: 0,
+        potentialPayout: 0,
+        activeBets: 0,
+        winnings: 0
+      },
+      rank: type === 'personal' ? {
+        position: 0,
+        totalUsers: 0,
+        percentile: 0
+      } : null
     };
 
-    userBets.forEach(bet => {
+    // Get user's bets
+    let userBets;
+    try {
       if (type === 'personal') {
-        // Personal stats calculations
-        if (bet.userId.toString() === userId) {
-          stats.created++;
-          if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
-            stats.won++;
-            stats.winnings += bet.payout;
-          }
-        } else if (bet.challengerId?.toString() === userId) {
-          stats.accepted++;
-          if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
-            stats.won++;
-            stats.winnings += bet.payout;
-          }
-        }
-
-        // Calculate financial stats based on matchedAt for personal view
-        if (!bet.matchedAt && bet.userId.toString() === userId) {
-          // Open bets (no matchedAt time) - only count if user created them
-          stats.pending++;
-          stats.totalStaked += bet.stake;
-          stats.potentialPayout += bet.payout;
-        } else if (bet.matchedAt && bet.status !== 'completed') {
-          // Active bets (has matchedAt time but not completed)
-          stats.activeBets++;
-          if (bet.userId.toString() === userId) {
-            // For creator: use their original stake and potential payout
-            stats.totalStaked += bet.stake;
-            stats.potentialPayout += bet.payout;
-          } else if (bet.challengerId?.toString() === userId) {
-            // For challenger: their stake is the creator's payout minus creator's stake
-            const challengerStake = bet.payout - bet.stake;
-            stats.totalStaked += challengerStake;
-            stats.potentialPayout += (bet.stake + challengerStake); // Total pooled amount
-          }
-        }
+        userBets = await Bet.find({
+          $or: [
+            { userId: userObjectId },
+            { challengerId: userObjectId }
+          ]
+        }).lean();
       } else {
-        // Global stats calculations
-        if (!bet.matchedAt) {
-          // Open bets (no matchedAt time)
-          stats.pending++;
-          stats.totalStaked += bet.stake;
-          stats.potentialPayout += bet.payout;
-        } else if (bet.matchedAt && bet.status !== 'completed') {
-          // Active bets (has matchedAt time but not completed)
-          stats.activeBets++;
-          // For global view, count total pooled amount
-          const challengerStake = bet.payout - bet.stake;
-          stats.totalStaked += (bet.stake + challengerStake);
-          stats.potentialPayout += (bet.stake + challengerStake);
-        }
-
-        // Track other global stats
-        if (bet.status === 'completed' && bet.winnerId) {
-          stats.won++;
-          stats.winnings += bet.payout;
-        }
+        userBets = await Bet.find({}).lean();
       }
-    });
-
-    // After processing all bets, assign aggregate stats based on type
-    if (type === 'personal') {
-      stats.matched = userBets.filter(bet => bet.matchedAt).length;
-    } else {
-      stats.created = userBets.length;
-      stats.matched = userBets.filter(bet => bet.matchedAt).length;
-      stats.completed = userBets.filter(bet => bet.status === 'completed').length;
+    } catch (error) {
+      console.error('Error fetching bets:', error);
+      userBets = [];
     }
 
-    // Get user's token balance for personal stats
-    const user = type === 'personal' ? 
-      await User.findById(userId).select('tokenBalance').lean() :
-      { tokenBalance: 0 };
-
-    // Get rank statistics
-    const userRank = await Bet.aggregate([
-      {
-        $group: {
-          _id: {
-            $cond: [
-              { $eq: ['$challengerId', null] },
-              '$userId',
-              '$challengerId'
-            ]
-          },
-          totalBets: { $sum: 1 }
-        }
-      },
-      { $sort: { totalBets: -1 } }
-    ]);
-
-    const rankIndex = type === 'personal' ?
-      userRank.findIndex(rank => rank._id.toString() === userId) :
-      -1;
+    // Calculate stats from bets
+    const stats = calculateStats(userBets, userId, type, defaultStats);
 
     return res.status(200).json({
       success: true,
-      stats: {
-        betting: {
-          total: stats.total,
-          pending: stats.pending,
-          matched: stats.matched,
-          completed: stats.completed,
-          created: stats.created,
-          accepted: stats.accepted,
-          won: stats.won
-        },
-        financial: {
-          tokenBalance: user?.tokenBalance || 0,
-          totalStaked: stats.totalStaked,
-          potentialPayout: stats.potentialPayout,
-          activeBets: stats.activeBets,
-          winnings: stats.winnings
-        },
-        rank: type === 'personal' ? {
-          position: rankIndex + 1,
-          totalUsers: userRank.length,
-          percentile: Math.round(((userRank.length - (rankIndex + 1)) / userRank.length) * 100)
-        } : null
-      }
+      stats
     });
 
   } catch (error) {
     console.error('Error fetching bet stats:', error);
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      code: error.code
-    });
     return res.status(500).json({ 
       error: 'Failed to fetch bet statistics',
-      details: error.message,
-      code: error.code
+      details: error.message
     });
   }
+}
+
+function calculateStats(bets, userId, type, defaultStats) {
+  const stats = { ...defaultStats };
+  
+  bets.forEach(bet => {
+    if (type === 'personal') {
+      // Personal stats calculations
+      if (bet.userId.toString() === userId) {
+        stats.betting.created++;
+        if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
+          stats.betting.won++;
+          stats.financial.winnings += bet.payout;
+        }
+      } else if (bet.challengerId?.toString() === userId) {
+        stats.betting.accepted++;
+        if (bet.status === 'completed' && bet.winnerId?.toString() === userId) {
+          stats.betting.won++;
+          stats.financial.winnings += bet.payout;
+        }
+      }
+
+      // Calculate financial stats based on matchedAt for personal view
+      if (!bet.matchedAt && bet.userId.toString() === userId) {
+        // Open bets (no matchedAt time) - only count if user created them
+        stats.betting.pending++;
+        stats.financial.totalStaked += bet.stake;
+        stats.financial.potentialPayout += bet.payout;
+      } else if (bet.matchedAt && bet.status !== 'completed') {
+        // Active bets (has matchedAt time but not completed)
+        stats.financial.activeBets++;
+        if (bet.userId.toString() === userId) {
+          // For creator: use their original stake and potential payout
+          stats.financial.totalStaked += bet.stake;
+          stats.financial.potentialPayout += bet.payout;
+        } else if (bet.challengerId?.toString() === userId) {
+          // For challenger: their stake is the creator's payout minus creator's stake
+          const challengerStake = bet.payout - bet.stake;
+          stats.financial.totalStaked += challengerStake;
+          stats.financial.potentialPayout += (bet.stake + challengerStake); // Total pooled amount
+        }
+      }
+    } else {
+      // Global stats calculations
+      if (!bet.matchedAt) {
+        // Open bets (no matchedAt time)
+        stats.betting.pending++;
+        stats.financial.totalStaked += bet.stake;
+        stats.financial.potentialPayout += bet.payout;
+      } else if (bet.matchedAt && bet.status !== 'completed') {
+        // Active bets (has matchedAt time but not completed)
+        stats.financial.activeBets++;
+        // For global view, count total pooled amount
+        const challengerStake = bet.payout - bet.stake;
+        stats.financial.totalStaked += (bet.stake + challengerStake);
+        stats.financial.potentialPayout += (bet.stake + challengerStake);
+      }
+
+      // Track other global stats
+      if (bet.status === 'completed' && bet.winnerId) {
+        stats.betting.won++;
+        stats.financial.winnings += bet.payout;
+      }
+    }
+  });
+
+  // Calculate totals and other aggregate stats
+  stats.betting.total = bets.length;
+  stats.betting.matched = bets.filter(bet => bet.matchedAt).length;
+  stats.betting.completed = bets.filter(bet => bet.status === 'completed').length;
+
+  // Calculate rank if personal stats
+  if (type === 'personal') {
+    try {
+      // Get total number of users with bets
+      const uniqueUsers = new Set(bets.flatMap(bet => [
+        bet.userId.toString(),
+        bet.challengerId?.toString()
+      ].filter(Boolean)));
+
+      // Calculate user's position based on total bets
+      const userBets = bets.filter(bet => 
+        bet.userId.toString() === userId || 
+        bet.challengerId?.toString() === userId
+      ).length;
+
+      const totalUsers = uniqueUsers.size;
+      const position = Array.from(uniqueUsers)
+        .map(id => ({
+          id,
+          total: bets.filter(bet => 
+            bet.userId.toString() === id || 
+            bet.challengerId?.toString() === id
+          ).length
+        }))
+        .sort((a, b) => b.total - a.total)
+        .findIndex(user => user.id === userId) + 1;
+
+      stats.rank = {
+        position,
+        totalUsers,
+        percentile: Math.round(((totalUsers - position) / totalUsers) * 100)
+      };
+    } catch (error) {
+      console.error('Error calculating rank:', error);
+      // Keep default rank values if calculation fails
+    }
+  }
+
+  return stats;
 } 
