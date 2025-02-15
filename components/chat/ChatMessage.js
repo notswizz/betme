@@ -54,12 +54,11 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, gam
       if (!response.ok) throw new Error(data.error || 'Failed to accept bet');
       
       setTimeout(() => {
-        window.location.reload();
+        window.location.href = '/';
       }, 5000);
     } catch (error) {
       console.error('Error accepting bet:', error);
       alert(error.message);
-    } finally {
       setTimeout(() => {
         setIsLoading(false);
       }, 5000);
