@@ -7,14 +7,15 @@ import { ObjectId } from 'mongodb';
 import { handleNormalChat } from '@/pages/api/actions/chat';
 import { checkBalance } from '@/pages/api/actions/balance';
 import { getListings } from '@/pages/api/actions/listing';
-import getUserModel from '@/models/User';
+import getModel from '@/models/User';
 import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 import { getPlayerStats, getTeamNextGame, handleBasketballQuery, fetchPlayerStatistics } from '@/utils/nbaApi';
 
 import { ensureModels } from '@/utils/models';
 
-const User = getUserModel();
+// Get the User model after database connection
+let User;
 
 console.log('User model:', User); // Check if User model is defined
 
@@ -219,6 +220,11 @@ function calculatePayout(stake, odds) {
 async function getBets(userId, action = 'view_open_bets') {
   try {
     console.log('Getting bets with action:', action, 'for userId:', userId);
+    
+    // Ensure User model is initialized
+    if (!User) {
+      User = getModel();
+    }
     
     // Ensure userId is a valid string before converting to ObjectId
     if (!userId || typeof userId !== 'string') {
@@ -439,152 +445,164 @@ async function handleBetConfirmation(userId, betData) {
 // Main API route handler
 export default async function handler(req, res) {
   if (req.method === 'POST') {
-    await connectDB();
+    try {
+      // Connect to database first
+      await connectDB();
+      
+      // Initialize User model after connection
+      User = getModel();
+      
+      // Get user ID from token
+      const token = req.headers.authorization?.split(' ')[1];
+      const userId = await verifyToken(token);
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    // Get user ID from token
-    const token = req.headers.authorization?.split(' ')[1];
-    const userId = await verifyToken(token);
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+      // Get conversation ID and messages from request
+      const { messages, conversationId, confirmAction, gameState } = req.body;
+      
+      // Validate messages
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: 'Invalid messages format' });
+      }
 
-    // Get conversation ID and messages from request
-    const { messages, conversationId, confirmAction, gameState } = req.body;
-    
-    // Validate messages
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: 'Invalid messages format' });
-    }
+      // Insert the following block immediately after verifying the token and before getting or creating the conversation
+      if (confirmAction) {
+        let conversation;
+        if (conversationId) {
+          conversation = await Conversation.findById(conversationId);
+          if (!conversation) {
+            conversation = new Conversation({ userId, messages: [] });
+          }
+        } else {
+          conversation = new Conversation({ userId, messages: [] });
+        }
 
-    // Insert the following block immediately after verifying the token and before getting or creating the conversation
-    if (confirmAction) {
+        const actionResult = await handleAction(confirmAction, userId, token, gameState);
+        if (!actionResult.success) {
+          return res.status(400).json({ error: actionResult.message || actionResult.error || 'Failed to process action' });
+        }
+
+        let actionMessage;
+        if (confirmAction.name && confirmAction.name.toLowerCase() === 'place_bet') {
+          actionMessage = {
+            role: 'assistant',
+            type: 'bet_success',
+            content: actionResult.bet || actionResult.message || 'Bet placed successfully.'
+          };
+        } else {
+          actionMessage = {
+            role: 'assistant',
+            type: confirmAction.name,
+            content: actionResult.message || `Action ${confirmAction.name} processed successfully.`
+          };
+        }
+
+        conversation.messages.push({
+          role: 'user',
+          content: `${confirmAction.name} action confirmed`
+        });
+        conversation.messages.push(actionMessage);
+        await conversation.save();
+        return res.status(200).json({
+          message: actionMessage,
+          conversationId: conversation._id.toString()
+        });
+      }
+
+      // Get or create conversation
       let conversation;
       if (conversationId) {
         conversation = await Conversation.findById(conversationId);
         if (!conversation) {
-          conversation = new Conversation({ userId, messages: [] });
+          return res.status(404).json({ error: 'Conversation not found' });
         }
       } else {
-        conversation = new Conversation({ userId, messages: [] });
+        conversation = new Conversation({
+          userId,
+          messages: []
+        });
       }
 
-      const actionResult = await handleAction(confirmAction, userId, token, gameState);
-      if (!actionResult.success) {
-        return res.status(400).json({ error: actionResult.message || actionResult.error || 'Failed to process action' });
+      // Get AI response and analyze intent
+      const { message: responseMessage, intent } = await analyzeConversation(messages);
+      console.log('Processed response:', { responseMessage, intent });
+
+      // Handle view bets request based on AI intent
+      if (responseMessage.type === 'bet_list') {
+        console.log('Handling bet viewing request with action:', responseMessage.action);
+        
+        // Get all bets and filter based on action
+        const betsResult = await getBets(userId, responseMessage.action);
+        
+        if (!betsResult.success) {
+          return res.status(400).json({ error: betsResult.error });
+        }
+        
+        // Save the view bets request and response
+        conversation.messages.push({
+          role: 'user',
+          content: messages[messages.length - 1].content
+        });
+        conversation.messages.push(betsResult.message);
+        await conversation.save();
+        
+        return res.status(200).json({
+          message: betsResult.message,
+          conversationId: conversation._id.toString()
+        });
       }
 
-      let actionMessage;
-      if (confirmAction.name && confirmAction.name.toLowerCase() === 'place_bet') {
-        actionMessage = {
+      // Insert the following block after the console.log('Processed response:', { responseMessage, intent }); line
+      if (intent && intent.intent === 'token_balance') {
+        // Fetch user balance from MongoDB
+        const user = await User.findById(userId);
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+        const balanceMessage = {
           role: 'assistant',
-          type: 'bet_success',
-          content: actionResult.bet || actionResult.message || 'Bet placed successfully.'
+          type: 'text',
+          content: `Your current balance is ${user.tokenBalance} tokens.`
         };
-      } else {
-        actionMessage = {
-          role: 'assistant',
-          type: confirmAction.name,
-          content: actionResult.message || `Action ${confirmAction.name} processed successfully.`
-        };
+
+        // Save conversation with user message and response
+        conversation.messages.push({
+          role: 'user',
+          content: messages[messages.length - 1].content
+        });
+        conversation.messages.push(balanceMessage);
+        await conversation.save();
+
+        return res.status(200).json({
+          message: balanceMessage,
+          conversationId: conversation._id.toString()
+        });
       }
 
-      conversation.messages.push({
-        role: 'user',
-        content: `${confirmAction.name} action confirmed`
-      });
-      conversation.messages.push(actionMessage);
-      await conversation.save();
-      return res.status(200).json({
-        message: actionMessage,
-        conversationId: conversation._id.toString()
-      });
-    }
-
-    // Get or create conversation
-    let conversation;
-    if (conversationId) {
-      conversation = await Conversation.findById(conversationId);
-      if (!conversation) {
-        return res.status(404).json({ error: 'Conversation not found' });
+      // For other messages, save and return
+      if (messages.length > 0) {
+        conversation.messages.push({
+          role: 'user',
+          content: messages[messages.length - 1].content
+        });
       }
-    } else {
-      conversation = new Conversation({
-        userId,
-        messages: []
-      });
-    }
-
-    // Get AI response and analyze intent
-    const { message: responseMessage, intent } = await analyzeConversation(messages);
-    console.log('Processed response:', { responseMessage, intent });
-
-    // Handle view bets request based on AI intent
-    if (responseMessage.type === 'bet_list') {
-      console.log('Handling bet viewing request with action:', responseMessage.action);
-      
-      // Get all bets and filter based on action
-      const betsResult = await getBets(userId, responseMessage.action);
-      
-      if (!betsResult.success) {
-        return res.status(400).json({ error: betsResult.error });
-      }
-      
-      // Save the view bets request and response
-      conversation.messages.push({
-        role: 'user',
-        content: messages[messages.length - 1].content
-      });
-      conversation.messages.push(betsResult.message);
-      await conversation.save();
-      
-      return res.status(200).json({
-        message: betsResult.message,
-        conversationId: conversation._id.toString()
-      });
-    }
-
-    // Insert the following block after the console.log('Processed response:', { responseMessage, intent }); line
-    if (intent && intent.intent === 'token_balance') {
-      // Fetch user balance from MongoDB
-      const user = await User.findById(userId);
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
-      const balanceMessage = {
-        role: 'assistant',
-        type: 'text',
-        content: `Your current balance is ${user.tokenBalance} tokens.`
-      };
-
-      // Save conversation with user message and response
-      conversation.messages.push({
-        role: 'user',
-        content: messages[messages.length - 1].content
-      });
-      conversation.messages.push(balanceMessage);
+      conversation.messages.push(responseMessage);
       await conversation.save();
 
       return res.status(200).json({
-        message: balanceMessage,
+        message: responseMessage,
         conversationId: conversation._id.toString()
       });
-    }
 
-    // For other messages, save and return
-    if (messages.length > 0) {
-      conversation.messages.push({
-        role: 'user',
-        content: messages[messages.length - 1].content
+    } catch (error) {
+      console.error('Error in chat process:', error);
+      return res.status(500).json({ 
+        error: error.message || 'Internal server error',
+        details: error.toString()
       });
     }
-    conversation.messages.push(responseMessage);
-    await conversation.save();
-
-    return res.status(200).json({
-      message: responseMessage,
-      conversationId: conversation._id.toString()
-    });
-
   } else {
     res.setHeader('Allow', ['POST']);
     res.status(405).end(`Method ${req.method} Not Allowed`);

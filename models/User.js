@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+// Define the schema
 const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   username: { type: String, required: true, unique: true },
@@ -8,13 +9,16 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// Function to get or create the User model
-const getUserModel = () => {
-  // Delete any existing model to force a clean schema
-  if (mongoose.models.User) {
-    delete mongoose.models.User;
+// Create a more robust model registration function
+const getModel = () => {
+  try {
+    // Try to get existing model
+    return mongoose.model('User');
+  } catch {
+    // If model doesn't exist, define and return it
+    return mongoose.model('User', UserSchema);
   }
-  return mongoose.model('User', UserSchema);
 };
 
-export default getUserModel(); 
+// Export the model getter
+export default getModel; 
