@@ -59,11 +59,23 @@ const BetSchema = new mongoose.Schema({
     ref: 'User',
     default: null
   },
+  winningTeam: {
+    type: String,
+    default: null
+  },
+  votes: {
+    type: [{ userId: mongoose.Schema.Types.ObjectId, team: String }],
+    default: []
+  },
   createdAt: {
     type: Date,
     default: Date.now
   },
   matchedAt: {
+    type: Date,
+    default: null
+  },
+  completedAt: {
     type: Date,
     default: null
   }

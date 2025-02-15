@@ -106,6 +106,12 @@ const BetConfirmation = memo(function BetConfirmation({ message, onConfirm, onCa
               <div className="text-base sm:text-lg font-semibold text-green-400">${displayPayout}</div>
             </div>
 
+            {/* Winning Team */}
+            <div className="bg-gray-800/40 rounded-xl p-3 sm:p-4 border border-gray-700/30">
+              <div className="text-[10px] sm:text-xs text-gray-400 mb-1">Winning Team</div>
+              <div className="text-sm font-medium text-white">{action.team1 === action.pick ? action.team1 : action.team2}</div>
+            </div>
+
             {/* Action Buttons */}
             <div className="grid grid-cols-2 gap-2 sm:gap-4 pt-2">
               <button

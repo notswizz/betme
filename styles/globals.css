@@ -50,3 +50,19 @@ html {
 }
 
 /* ... rest of your existing styles ... */
+
+@font-face {
+  font-family: 'MyCustomFont';
+  src: url('/my-font.woff2') format('woff2');
+  font-weight: normal;
+  font-style: normal;
+}
+
+body {
+  font-family: 'Montserrat', sans-serif; /* Apply the Montserrat font to all text */
+}
+
+/* Remove specific font-family declarations for headings */
+h1, h2, h3, p {
+  /* No need to specify font-family here, it will inherit from body */
+}
