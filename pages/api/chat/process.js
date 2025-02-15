@@ -14,6 +14,8 @@ import { getPlayerStats, getTeamNextGame, handleBasketballQuery, fetchPlayerStat
 
 import { ensureModels } from '@/utils/models';
 
+console.log('User model:', User); // Check if User model is defined
+
 // Constants for validation
 const VALID_INTENTS = ['basketball_query', 'place_bet', 'view_bets', 'view_open_bets', 'chat', 'betting'];
 const VALID_MESSAGE_TYPES = ['text', 'player_stats', 'betslip', 'open_bets', 'image', 'bet_success'];
