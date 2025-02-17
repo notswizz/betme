@@ -266,17 +266,15 @@ export default function BetList({ bets, text, onAction }) {
   }
 
   return (
-    <div className="w-full">
+    <div className="w-full -mx-4">
       {text && (
         <p className="text-gray-300 mb-4 px-4">{text}</p>
       )}
-      <div className="relative -mx-4">
-        <div className="overflow-x-auto scrollbar-hide">
-          <div className="inline-flex px-4 py-2 gap-4">
-            {betArray.map((bet) => (
-              <BetCard key={bet._id} bet={bet} onAction={onAction} />
-            ))}
-          </div>
+      <div className="overflow-x-auto scrollbar-hide">
+        <div className="inline-flex px-4 py-2 gap-4 min-w-max">
+          {betArray.map((bet) => (
+            <BetCard key={bet._id} bet={bet} onAction={onAction} />
+          ))}
         </div>
       </div>
     </div>
