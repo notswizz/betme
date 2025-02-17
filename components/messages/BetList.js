@@ -10,10 +10,19 @@ function BetCard({ bet, onAction }) {
   const isChallenger = Boolean(bet.isChallenger);
 
   // Determine which teams to show first based on perspective
-  const [topTeam, bottomTeam] = isChallenger ? [bet.team2, bet.team1] : [bet.team1, bet.team2];
-  const [topOdds, bottomLine] = isChallenger ? 
-    [bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line, bet.odds] :
-    [bet.odds, bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line];
+  const [topTeam, bottomTeam] = (isMyBet && bet.status === 'matched') ? 
+    // For matched bets in My Bets view, always show challenger perspective
+    [bet.team2, bet.team1] 
+    : isChallenger ? 
+      [bet.team2, bet.team1] 
+      : [bet.team1, bet.team2];
+
+  const [topOdds, bottomLine] = (isMyBet && bet.status === 'matched') ?
+    // For matched bets in My Bets view, always show challenger perspective
+    [bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line, bet.odds]
+    : isChallenger ? 
+      [bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line, bet.odds]
+      : [bet.odds, bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line];
 
   console.log('BetCard flags:', {
     betId: bet._id,
@@ -55,33 +64,42 @@ function BetCard({ bet, onAction }) {
   const displayStake = canAccept ? 
     // For open bets that can be accepted, show required stake (payout - stake)
     Number(bet.payout - bet.stake).toFixed(2)
-    : isChallenger ?
-      // For challenger's view of their own bet, show their stake (payout - original stake)
+    : (isMyBet && bet.status === 'matched') ?
+      // For matched bets in My Bets view, always show challenger stake
       Number(bet.payout - bet.stake).toFixed(2)
-      : 
-      // For original bettor's view of their bet, show their original stake
-      Number(bet.stake).toFixed(2);
+      : isChallenger ?
+        // For challenger's view of their own bet, show their stake
+        Number(bet.payout - bet.stake).toFixed(2)
+        : 
+        // For original bettor's view of their bet, show their original stake
+        Number(bet.stake).toFixed(2);
 
-  // Team highlight colors based on user role and view type
-  const [topHighlight, bottomHighlight] = canAccept ? 
-    // For open bets: red top, green bottom
-    ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'] 
-    : isMyBet && !isChallenger ?
-      // For my bets as original bettor: green top, red bottom
-      ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']
-      :
-      // For my bets as challenger: red top, green bottom
-      ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'];
+  // Team highlight colors based on view type
+  const [topHighlight, bottomHighlight] = canJudge ? 
+    // For judge view: no highlights
+    ['border-gray-700/30', 'border-gray-700/30']
+    : canAccept || (isMyBet && bet.status === 'matched') ? 
+      // For open bets and matched bets in My Bets view: green top, red bottom
+      ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50'] 
+      : isMyBet && !isChallenger ?
+        // For my pending bets as original bettor: green top, red bottom
+        ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']
+        :
+        // For my bets as challenger: red top, green bottom
+        ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'];
 
-  const [topOddsHighlight, bottomOddsHighlight] = canAccept ?
-    // For open bets: red top, blue bottom
-    ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
-    : isMyBet && !isChallenger ?
-      // For my bets as original bettor: green top, blue bottom
+  const [topOddsHighlight, bottomOddsHighlight] = canJudge ?
+    // For judge view: neutral colors
+    ['text-gray-400 bg-gray-800/50 border border-gray-700/30', 'text-gray-400 bg-gray-800/50 border border-gray-700/30']
+    : canAccept || (isMyBet && bet.status === 'matched') ?
+      // For open bets and matched bets in My Bets view: green top, blue bottom
       ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
-      :
-      // For my bets as challenger: red top, blue bottom
-      ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
+      : isMyBet && !isChallenger ?
+        // For my pending bets as original bettor: green top, blue bottom
+        ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
+        :
+        // For my bets as challenger: red top, blue bottom
+        ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
 
   console.log('Stake calculation:', {
     canAccept,
@@ -140,22 +158,24 @@ function BetCard({ bet, onAction }) {
           </div>
 
           {/* Stakes */}
-          <div className="mt-3.5 space-y-2">
-            <div className="flex items-center justify-between py-2.5 px-3.5 rounded-lg bg-gray-800/50 border border-gray-700/30">
-              <div>
-                <div className="text-gray-500 text-xs mb-0.5">
-                  {shouldShowAcceptButton() ? 'Required Stake' : 'Your Stake'}
+          {!canJudge && (
+            <div className="mt-3.5 space-y-2">
+              <div className="flex items-center justify-between py-2.5 px-3.5 rounded-lg bg-gray-800/50 border border-gray-700/30">
+                <div>
+                  <div className="text-gray-500 text-xs mb-0.5">
+                    {shouldShowAcceptButton() ? 'Required Stake' : 'Your Stake'}
+                  </div>
+                  <div className="text-white font-semibold text-base">
+                    ${displayStake}
+                  </div>
                 </div>
-                <div className="text-white font-semibold text-base">
-                  ${displayStake}
+                <div className="text-right">
+                  <div className="text-gray-500 text-xs mb-0.5">Total Payout</div>
+                  <div className="text-green-400 font-semibold text-base">${Number(bet.payout).toFixed(2)}</div>
                 </div>
-              </div>
-              <div className="text-right">
-                <div className="text-gray-500 text-xs mb-0.5">Total Payout</div>
-                <div className="text-green-400 font-semibold text-base">${Number(bet.payout).toFixed(2)}</div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Status Badge */}
           {isMyBet && (
