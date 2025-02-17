@@ -154,8 +154,8 @@ export default function BetCard({ bet, onAction }) {
               <div className="text-sm font-medium text-gray-300 mb-2">Choose Winner:</div>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { name: topTeam, value: isChallenger ? bet.team2 : bet.team1 },
-                  { name: bottomTeam, value: isChallenger ? bet.team1 : bet.team2 }
+                  { name: topTeam, value: bet.team1 },
+                  { name: bottomTeam, value: bet.team2 }
                 ].map((team) => (
                   <button
                     key={team.value}
