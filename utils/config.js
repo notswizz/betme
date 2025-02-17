@@ -13,6 +13,21 @@ export const CACHE_CONFIG = {
   SHORT_DURATION: 30000   // 30 seconds
 };
 
+// Betting configuration
+export const BETTING_CONFIG = {
+  // Number of votes required to determine a winner
+  VOTE_THRESHOLD: 1,
+  
+  // Minimum percentage of votes needed for a team to win (e.g., 0.66 = 66%)
+  VOTE_PERCENTAGE_REQUIRED: 0.66,
+  
+  // Whether to allow voting after threshold is met
+  STOP_VOTING_AFTER_THRESHOLD: true,
+  
+  // Reward for correct votes (future feature)
+  VOTE_REWARD_TOKENS: 1
+};
+
 // Get current NBA season
 export function getCurrentSeason() {
   // For the NBA API, we use just the starting year of the season
