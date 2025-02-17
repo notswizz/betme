@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import ChatContainer from '../components/chat/ChatContainer';
 import LoginForm from '../components/auth/LoginForm';
+import Typewriter from 'typewriter-effect';
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -40,8 +41,28 @@ export default function Home() {
               <p className="text-base sm:text-lg md:text-2xl text-gray-300 max-w-2xl mx-auto mb-6 sm:mb-12 px-3 leading-relaxed">
                 AI Peer-to-Peer Betting Platform
               </p>
-              <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto mb-8 px-3">
-                create custom wagers, get AI insights and cash the fuck out
+              <p className="text-sm sm:text-base max-w-xl mx-auto mb-8 px-3">
+                <span className="inline-block p-2 rounded-lg bg-gradient-to-r from-blue-900/50 via-indigo-900/50 to-blue-900/50 backdrop-blur-sm border border-blue-500/20 shadow-lg">
+                  <div className="min-h-[24px]">
+                    <Typewriter
+                      onInit={(typewriter) => {
+                        typewriter
+                          .typeString('<span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500 font-medium">create custom wagers, get AI insights and cash the fuck out</span>')
+                          .pauseFor(2500)
+                          .deleteAll()
+                          .start();
+                      }}
+                      options={{
+                        autoStart: true,
+                        loop: true,
+                        delay: 50,
+                        deleteSpeed: 30,
+                        cursor: '<span class="text-blue-400">|</span>',
+                        html: true
+                      }}
+                    />
+                  </div>
+                </span>
               </p>
               <div className="w-full max-w-[280px] sm:max-w-sm mx-auto px-2">
                 <LoginForm onSuccess={() => setIsAuthenticated(true)} />
