@@ -27,10 +27,14 @@ export default async function handler(req, res) {
     // Connect to database
     await connectDB();
     
-    // Get user to check token balance
-    const user = await User.findById(userId);
+    // Get user to check token balance and username
+    const user = await User.findById(userId).select('+username');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user.username) {
+      return res.status(400).json({ message: 'Username not found for user' });
     }
 
     // Extract and validate bet data
@@ -82,12 +86,14 @@ export default async function handler(req, res) {
       odds: numericOdds,
       stake: numericStake,
       challengerStake,
-      payout
+      payout,
+      userUsername: user.username
     });
 
     // Create bet with exact schema match
     const bet = new Bet({
       userId,
+      userUsername: user.username,
       type,
       sport,
       team1,
@@ -121,7 +127,8 @@ export default async function handler(req, res) {
         stake: bet.stake,
         challengerStake: bet.challengerStake,
         payout: bet.payout,
-        status: bet.status
+        status: bet.status,
+        userUsername: bet.userUsername
       }
     });
 

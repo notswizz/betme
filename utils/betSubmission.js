@@ -153,9 +153,13 @@ export async function submitBet(betData, token = null) {
         throw new Error('Invalid token');
       }
 
-      const user = await User.findById(userId);
+      const user = await User.findById(userId).select('+username');
       if (!user) {
         throw new Error('User not found');
+      }
+
+      if (!user.username) {
+        throw new Error('Username not found for user');
       }
 
       if (user.tokenBalance < formattedBet.stake) {
@@ -164,6 +168,7 @@ export async function submitBet(betData, token = null) {
 
       const bet = new Bet({
         userId,
+        userUsername: user.username,
         ...formattedBet,
         status: 'pending',
         createdAt: new Date()

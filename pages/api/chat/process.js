@@ -418,12 +418,6 @@ async function handleBetConfirmation(userId, betData) {
     // Get user with username field explicitly selected
     console.log('Fetching user with ID:', userId);
     const user = await User.findById(userId).select('+username');
-    console.log('Found user:', {
-      id: user?._id,
-      username: user?.username,
-      hasUsername: Boolean(user?.username),
-      fields: Object.keys(user?._doc || {})
-    });
     
     if (!user) {
       console.error('User not found:', userId);
@@ -435,6 +429,12 @@ async function handleBetConfirmation(userId, betData) {
       throw new Error('Username not found for user');
     }
 
+    console.log('Found user:', {
+      id: user._id,
+      username: user.username,
+      tokenBalance: user.tokenBalance
+    });
+
     // Check if user has enough tokens
     const stake = parseFloat(bet.stake);
     console.log('Checking balance:', { userTokens: user.tokenBalance, requiredStake: stake });
@@ -445,7 +445,7 @@ async function handleBetConfirmation(userId, betData) {
 
     // Create new bet with userUsername explicitly set
     const newBet = new Bet({
-      userId,
+      userId: user._id,
       userUsername: user.username, // Explicitly set userUsername
       type: bet.type === 'betslip' ? 'Moneyline' : bet.type || 'Moneyline',
       sport: bet.sport || 'NBA',
@@ -472,7 +472,8 @@ async function handleBetConfirmation(userId, betData) {
 
     // Return success without a message
     return {
-      success: true
+      success: true,
+      bet: newBet
     };
   } catch (error) {
     console.error('Error confirming bet:', error);
