@@ -3,33 +3,69 @@ import React from 'react';
 function BetCard({ bet, onAction }) {
   console.log('BetCard received bet:', bet);
 
-  // Ensure flags are boolean values and properly set based on bet status
+  // Determine viewer's relationship to the bet
   const isMyBet = Boolean(bet.isMyBet);
-  const canJudge = Boolean(bet.canJudge) && !isMyBet;
-  const canAccept = Boolean(bet.canAccept) && !isMyBet;
   const isChallenger = Boolean(bet.isChallenger);
+  const canAccept = Boolean(bet.canAccept) && !isMyBet;
+  const canJudge = Boolean(bet.canJudge) && !isMyBet;
 
-  // Determine which teams to show first based on perspective
-  const [topTeam, bottomTeam] = (isMyBet && bet.status === 'matched') ? 
-    // For matched bets in My Bets view, always show challenger perspective
-    [bet.team2, bet.team1] 
-    : isChallenger ? 
-      [bet.team2, bet.team1] 
-      : [bet.team1, bet.team2];
+  // For matched bets in My Bets view:
+  // If I'm the challenger, show my team (team2) on top
+  // If I'm the original bettor, show my team (team1) on top
+  const [topTeam, bottomTeam] = isMyBet ? 
+    (isChallenger ? [bet.team2, bet.team1] : [bet.team1, bet.team2]) :
+    (canAccept ? [bet.team2, bet.team1] : [bet.team1, bet.team2]);
 
-  const [topOdds, bottomLine] = (isMyBet && bet.status === 'matched') ?
-    // For matched bets in My Bets view, always show challenger perspective
-    [bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line, bet.odds]
-    : isChallenger ? 
-      [bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line, bet.odds]
-      : [bet.odds, bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line];
+  // Same logic for odds/lines
+  const [topOdds, bottomLine] = isMyBet ?
+    (isChallenger ? 
+      [bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line, bet.odds] :
+      [bet.odds, bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line]) :
+    (canAccept ?
+      [bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line, bet.odds] :
+      [bet.odds, bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line]);
+
+  // Calculate stake to display based on viewer's relationship to bet
+  const displayStake = (() => {
+    if (isMyBet) {
+      // For My Bets view, show payout
+      return Number(bet.payout).toFixed(2);
+    } else if (canAccept) {
+      // Potential challenger sees required stake
+      return Number(bet.payout - bet.stake).toFixed(2);
+    }
+    // Default view shows original stake
+    return Number(bet.stake).toFixed(2);
+  })();
+
+  // Team highlight colors based on relationship to bet
+  const [topHighlight, bottomHighlight] = isMyBet ?
+    (isChallenger ?
+      // I'm the challenger, my team (top) is red
+      ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'] :
+      // I'm the original bettor, my team (top) is green
+      ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']) :
+    (canAccept ?
+      // I can accept this bet, show my potential team (top) as red
+      ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'] :
+      // Default view
+      ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']);
+
+  // Odds highlight colors follow same logic
+  const [topOddsHighlight, bottomOddsHighlight] = isMyBet ?
+    (isChallenger ?
+      ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'] :
+      ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']) :
+    (canAccept ?
+      ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'] :
+      ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']);
 
   console.log('BetCard flags:', {
     betId: bet._id,
     status: bet.status,
     canJudge,
     canAccept,
-    isMyBet,
+    isMyBet: bet.isMyBet,
     isChallenger,
     hasJudgeActions: !!bet.judgeActions,
     rawBet: bet
@@ -59,50 +95,6 @@ function BetCard({ bet, onAction }) {
       onAction('game_not_over', { betId: bet._id });
     }
   };
-
-  // Calculate the stake to display
-  const displayStake = canAccept ? 
-    // For open bets that can be accepted, show required stake (payout - stake)
-    Number(bet.payout - bet.stake).toFixed(2)
-    : isMyBet ?
-      // For my bets, show payout - stake if I'm challenger, original stake if I'm original bettor
-      isChallenger ? 
-        Number(bet.payout - bet.stake).toFixed(2)
-        : Number(bet.stake).toFixed(2)
-      : 
-      // For other views, same logic
-      isChallenger ?
-        Number(bet.payout - bet.stake).toFixed(2)
-        : Number(bet.stake).toFixed(2);
-
-  // Team highlight colors based on view type
-  const [topHighlight, bottomHighlight] = canAccept ? 
-    // For open bets: red top, green bottom
-    ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50']
-    : isMyBet ?
-      // For my bets: if I'm challenger show red top/green bottom, if I'm original bettor show green top/red bottom
-      isChallenger ?
-        ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50']
-        : ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']
-      :
-      // For other views, same logic
-      isChallenger ?
-        ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50']
-        : ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50'];
-
-  const [topOddsHighlight, bottomOddsHighlight] = canAccept ? 
-    // For open bets: red top, blue bottom
-    ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
-    : isMyBet ?
-      // For my bets: if I'm challenger show red top/blue bottom, if I'm original bettor show green top/blue bottom
-      isChallenger ?
-        ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
-        : ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
-      :
-      // For other views, same logic
-      isChallenger ?
-        ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
-        : ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
 
   console.log('Stake calculation:', {
     canAccept,
@@ -162,19 +154,15 @@ function BetCard({ bet, onAction }) {
 
           {/* Stakes */}
           {!canJudge && (
-            <div className="mt-3.5 space-y-2">
-              <div className="flex items-center justify-between py-2.5 px-3.5 rounded-lg bg-gray-800/50 border border-gray-700/30">
-                <div>
-                  <div className="text-gray-500 text-xs mb-0.5">
-                    {shouldShowAcceptButton() ? 'Required Stake' : 'Your Stake'}
+            <div className="mt-3.5">
+              <div className="flex items-center justify-center py-3 px-4 rounded-lg bg-gradient-to-r from-gray-800/50 via-gray-800/70 to-gray-800/50 border border-gray-700/30">
+                <div className="text-center">
+                  <div className="text-gray-400 text-xs font-medium mb-1">
+                    {isMyBet ? 'Payout' : shouldShowAcceptButton() ? 'Required Stake' : 'Stake'}
                   </div>
-                  <div className="text-white font-semibold text-base">
-                    ${displayStake}
+                  <div className="text-green-400 font-bold text-lg">
+                    ${isMyBet ? Number(bet.payout).toFixed(2) : Number(displayStake).toFixed(2)}
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-gray-500 text-xs mb-0.5">Total Payout</div>
-                  <div className="text-green-400 font-semibold text-base">${Number(bet.payout).toFixed(2)}</div>
                 </div>
               </div>
             </div>
