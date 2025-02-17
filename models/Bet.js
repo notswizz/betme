@@ -40,6 +40,10 @@ const BetSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  challengerStake: {
+    type: Number,
+    required: true
+  },
   payout: {
     type: Number,
     required: true

@@ -51,25 +51,8 @@ function BetCard({ bet, onAction }) {
     }
   };
 
-  // Calculate challenger stake based on odds
-  const calculateChallengerStake = () => {
-    if (bet.challengerStake) return bet.challengerStake;
-    
-    const odds = parseFloat(bet.odds);
-    if (isNaN(odds)) return bet.stake;
-
-    if (odds > 0) {
-      // For positive odds (e.g. +150), challenger needs to risk more
-      // If original bettor puts up $100 at +150, challenger risks $150 to win $100
-      return parseFloat((bet.stake * Math.abs(odds) / 100).toFixed(2));
-    } else {
-      // For negative odds (e.g. -110), challenger needs to risk more
-      // If original bettor puts up $100 at -110, challenger risks $110 to win $100
-      return parseFloat((bet.stake * Math.abs(odds) / 100).toFixed(2));
-    }
-  };
-
-  const displayStake = isChallenger ? calculateChallengerStake() : bet.stake;
+  // Remove the complex calculation and just use the stored value
+  const displayStake = isChallenger ? bet.challengerStake : bet.stake;
 
   return (
     <div className="relative group w-[85vw] max-w-[320px] sm:w-[300px] flex-shrink-0">

@@ -66,6 +66,9 @@ export default async function handler(req, res) {
     }
     payout = parseFloat(payout.toFixed(2));
 
+    // Calculate challenger stake (what they need to put up to match the bet)
+    const challengerStake = parseFloat((payout - stake).toFixed(2));
+
     // Create bet with exact schema match
     const bet = new Bet({
       userId,
@@ -76,6 +79,7 @@ export default async function handler(req, res) {
       line,
       odds: numOdds,
       stake: parseFloat(stake),
+      challengerStake,
       payout,
       status: 'pending',
       createdAt: new Date()
