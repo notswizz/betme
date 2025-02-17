@@ -16,7 +16,7 @@ export const CACHE_CONFIG = {
 // Betting configuration
 export const BETTING_CONFIG = {
   // Number of votes required to determine a winner
-  VOTE_THRESHOLD: 1,
+  VOTE_THRESHOLD: 2,
   
   // Minimum percentage of votes needed for a team to win (e.g., 0.66 = 66%)
   VOTE_PERCENTAGE_REQUIRED: 0.66,

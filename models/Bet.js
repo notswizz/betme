@@ -6,9 +6,17 @@ const BetSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  userUsername: {
+    type: String,
+    required: true
+  },
   challengerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    default: null
+  },
+  challengerUsername: {
+    type: String,
     default: null
   },
   type: {
@@ -43,6 +51,14 @@ const BetSchema = new mongoose.Schema({
   payout: {
     type: Number,
     required: true
+  },
+  challengerStake: {
+    type: Number,
+    default: null
+  },
+  challengerPayout: {
+    type: Number,
+    default: null
   },
   status: {
     type: String,
