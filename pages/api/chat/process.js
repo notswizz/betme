@@ -7,17 +7,12 @@ import { ObjectId } from 'mongodb';
 import { handleNormalChat } from '@/pages/api/actions/chat';
 import { checkBalance } from '@/pages/api/actions/balance';
 import { getListings } from '@/pages/api/actions/listing';
-import getModel from '@/models/User';
-import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 import { getPlayerStats, getTeamNextGame, handleBasketballQuery, fetchPlayerStatistics } from '@/utils/nbaApi';
 
-import { ensureModels } from '@/utils/models';
-
-// Get the User model after database connection
-let User;
-
-console.log('User model:', User); // Check if User model is defined
+// Import models directly
+import User from '@/models/User';
+import Bet from '@/models/Bet';
 
 // Constants for validation
 const VALID_INTENTS = ['basketball_query', 'place_bet', 'view_bets', 'view_open_bets', 'chat', 'betting'];
@@ -220,11 +215,6 @@ function calculatePayout(stake, odds) {
 async function getBets(userId, action = 'view_open_bets') {
   try {
     console.log('Getting bets with action:', action, 'for userId:', userId);
-    
-    // Ensure User model is initialized
-    if (!User) {
-      User = getModel();
-    }
     
     // Ensure userId is a valid string before converting to ObjectId
     if (!userId || typeof userId !== 'string') {

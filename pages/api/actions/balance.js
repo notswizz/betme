@@ -1,6 +1,6 @@
 import { verifyToken } from '@/utils/auth';
 import connectDB from '@/utils/mongodb';
-import { User } from '@/models/User';
+import User from '@/models/User';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -38,20 +38,28 @@ export default async function handler(req, res) {
 
 // Keep existing functions for other parts of the app
 export async function checkBalance(userId) {
-  const user = await User.findById(userId);
-  
-  if (!user) {
-    throw new Error('User not found');
+  try {
+    await connectDB();
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    return {
+      role: 'assistant',
+      content: `Your current balance is ${user.tokenBalance} tokens.`
+    };
+  } catch (error) {
+    console.error('Error checking balance:', error);
+    throw error;
   }
-  
-  return {
-    role: 'assistant',
-    content: `Your current balance is ${user.tokenBalance} tokens.`
-  };
 }
 
 export async function addTokens(userId, amount) {
   try {
+    await connectDB();
+    
     // Convert amount to a clean integer
     let tokenAmount = 0;
     

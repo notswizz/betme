@@ -9,16 +9,16 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-// Create a more robust model registration function
-const getModel = () => {
-  if (mongoose.models.User) {
-    return mongoose.models.User;
-  }
-  
-  return mongoose.model('User', UserSchema);
-};
+// Handle model compilation in a way that works in development and production
+let User;
+try {
+  // Try to get the existing model
+  User = mongoose.model('User');
+} catch (error) {
+  // Model doesn't exist, create it
+  User = mongoose.model('User', UserSchema);
+}
 
 // Export both the model getter and the schema
-export const User = getModel();
 export const Schema = UserSchema;
 export default User; 

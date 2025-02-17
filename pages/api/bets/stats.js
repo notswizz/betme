@@ -1,6 +1,6 @@
 import { verifyToken } from '@/utils/auth';
 import connectDB from '@/utils/mongodb';
-import { User } from '@/models/User';
+import User from '@/models/User';
 import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 

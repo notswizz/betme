@@ -1,10 +1,5 @@
 import mongoose from 'mongoose';
 
-// Delete any existing model to force a clean schema
-if (mongoose.models.Bet) {
-  delete mongoose.models.Bet;
-}
-
 const BetSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -81,4 +76,14 @@ const BetSchema = new mongoose.Schema({
   }
 });
 
-export default mongoose.model('Bet', BetSchema); 
+// Handle model compilation in a way that works in development and production
+let Bet;
+try {
+  // Try to get the existing model
+  Bet = mongoose.model('Bet');
+} catch (error) {
+  // Model doesn't exist, create it
+  Bet = mongoose.model('Bet', BetSchema);
+}
+
+export default Bet; 
