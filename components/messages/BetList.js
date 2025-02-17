@@ -44,7 +44,7 @@ function BetCard({ bet, onAction }) {
   };
 
   return (
-    <div className="relative group snap-center min-w-[300px] w-[300px] mx-2 first:ml-4 last:mr-4">
+    <div className="relative group snap-start w-[85vw] max-w-[320px] sm:w-[300px] flex-shrink-0">
       {/* Animated border effect */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-xl opacity-30 group-hover:opacity-100 blur transition duration-500 group-hover:duration-200 animate-gradient-xy"></div>
       
@@ -196,15 +196,19 @@ export default function BetList({ bets, text, onAction }) {
   }
 
   return (
-    <div className="w-full max-w-full mx-auto">
+    <div className="w-full max-w-full mx-auto -mx-4">
       {text && (
         <p className="text-gray-300 mb-4 px-4">{text}</p>
       )}
-      <div className="overflow-x-auto scrollbar-hide snap-x snap-mandatory flex pb-4 w-full">
-        <div className="flex min-w-max gap-4">
-          {betArray.map((bet) => (
-            <BetCard key={bet._id} bet={bet} onAction={onAction} />
-          ))}
+      <div className="relative w-full">
+        <div className="overflow-x-auto overflow-y-hidden scrollbar-hide touch-pan-x">
+          <div className="flex pl-4 pr-[calc(100vw-85vw-1rem)] pb-4 snap-x snap-mandatory">
+            {betArray.map((bet, index) => (
+              <div key={bet._id} className={`${index === 0 ? '' : 'ml-4'}`}>
+                <BetCard bet={bet} onAction={onAction} />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
