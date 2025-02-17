@@ -433,6 +433,7 @@ async function handleBetConfirmation(userId, betData) {
     // Create new bet
     const newBet = new Bet({
       userId,
+      userUsername: user.username,
       type: bet.type === 'betslip' ? 'Moneyline' : bet.type || 'Moneyline',
       sport: bet.sport || 'NBA',
       team1: bet.team1,
