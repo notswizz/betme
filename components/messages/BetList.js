@@ -62,12 +62,26 @@ function BetCard({ bet, onAction }) {
       // For original bettor's view of their bet, show their original stake
       Number(bet.stake).toFixed(2);
 
-  // Team highlight colors based on user role
-  const [topHighlight, bottomHighlight] = 
-    ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'];
+  // Team highlight colors based on user role and view type
+  const [topHighlight, bottomHighlight] = canAccept ? 
+    // For open bets: red top, green bottom
+    ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'] 
+    : isMyBet && !isChallenger ?
+      // For my bets as original bettor: green top, red bottom
+      ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']
+      :
+      // For my bets as challenger: red top, green bottom
+      ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'];
 
-  const [topOddsHighlight, bottomOddsHighlight] = 
-    ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
+  const [topOddsHighlight, bottomOddsHighlight] = canAccept ?
+    // For open bets: red top, blue bottom
+    ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
+    : isMyBet && !isChallenger ?
+      // For my bets as original bettor: green top, blue bottom
+      ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
+      :
+      // For my bets as challenger: red top, blue bottom
+      ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
 
   console.log('Stake calculation:', {
     canAccept,
