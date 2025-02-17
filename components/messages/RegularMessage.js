@@ -46,15 +46,19 @@ export default function RegularMessage({ message, content: directContent }) {
     if (typeof text !== 'string') return '';
     
     if (text.includes('Current listings:')) {
-      return <p className="text-sm mb-1">Available Listings:</p>;
+      return <div className="text-sm mb-1">Available Listings:</div>;
     }
 
     if (text.includes('\n')) {
-      return text.split('\n').map((line, i) => (
-        <p key={i} className="text-sm mb-1">{line}</p>
-      ));
+      return (
+        <div className="space-y-1">
+          {text.split('\n').map((line, i) => (
+            <div key={i} className="text-sm">{line}</div>
+          ))}
+        </div>
+      );
     }
-    return <p className="text-sm">{text}</p>;
+    return <div className="text-sm">{text}</div>;
   };
 
   const listings = parseListings(content);
@@ -67,10 +71,8 @@ export default function RegularMessage({ message, content: directContent }) {
           : 'bg-gray-800/60 backdrop-blur-sm text-gray-100'
         }`}
       >
-        <div className="space-y-1">
-          {formatContent(content)}
-          {listings && <ListingView listings={listings} />}
-        </div>
+        {formatContent(content)}
+        {listings && <ListingView listings={listings} />}
       </div>
     </div>
   );

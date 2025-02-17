@@ -167,9 +167,9 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, onB
         return (
           <div className="space-y-4">
             {message.text && (
-              <div className="text-white">
+              <span className="text-white block">
                 <RegularMessage content={message.text} message={{ ...message, type: 'text' }} />
-              </div>
+              </span>
             )}
             <MemoizedBetSlipWrapper 
               data={typeof content === 'string' ? JSON.parse(content) : content} 

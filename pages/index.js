@@ -76,10 +76,10 @@ export default function Home() {
               <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-3 sm:mb-6 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-400 text-transparent bg-clip-text animate-gradient-x px-2">
                 BetBot
               </h1>
-              <p className="text-lg sm:text-xl md:text-3xl text-gray-200 max-w-2xl mx-auto mb-8 sm:mb-14 px-4 leading-relaxed text-center font-medium bg-gray-800/50 rounded-lg p-4">
+              <div className="text-lg sm:text-xl md:text-3xl text-gray-200 max-w-2xl mx-auto mb-8 sm:mb-14 px-4 leading-relaxed text-center font-medium bg-gray-800/50 rounded-lg p-4">
                 AI P2P Betting
-              </p>
-              <p className="text-sm sm:text-base max-w-xl mx-auto mb-8 px-3">
+              </div>
+              <div className="text-sm sm:text-base max-w-xl mx-auto mb-8 px-3">
                 <span className="inline-block p-2 rounded-lg bg-gradient-to-r from-blue-900/50 via-indigo-900/50 to-blue-900/50 backdrop-blur-sm border border-blue-500/20 shadow-lg">
                   <div className="min-h-[24px]">
                     <TypewriterText 
@@ -88,7 +88,7 @@ export default function Home() {
                     />
                   </div>
                 </span>
-              </p>
+              </div>
               <div className="w-full max-w-[280px] sm:max-w-sm mx-auto px-2">
                 <LoginForm onSuccess={() => setIsAuthenticated(true)} />
               </div>

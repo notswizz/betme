@@ -416,10 +416,23 @@ async function handleBetConfirmation(userId, betData) {
     }
 
     // Get user
-    const user = await User.findById(userId);
+    console.log('Fetching user with ID:', userId);
+    const user = await User.findById(userId).select('+username');
+    console.log('Found user:', {
+      id: user?._id,
+      username: user?.username,
+      hasUsername: Boolean(user?.username),
+      fields: Object.keys(user?._doc || {})
+    });
+    
     if (!user) {
       console.error('User not found:', userId);
       throw new Error('User not found');
+    }
+    
+    if (!user.username) {
+      console.error('Username not found for user:', userId);
+      throw new Error('Username not found for user');
     }
 
     // Check if user has enough tokens

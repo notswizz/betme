@@ -14,7 +14,7 @@ export default function BetList({ bets, text, onAction }) {
   if (!betArray || betArray.length === 0) {
     return (
       <div className="text-center p-4">
-        <p className="text-gray-400">{text || 'No bets available'}</p>
+        <span className="text-gray-400 block">{text || 'No bets available'}</span>
       </div>
     );
   }
@@ -22,7 +22,7 @@ export default function BetList({ bets, text, onAction }) {
   return (
     <div className="w-full">
       {text && (
-        <p className="text-gray-300 mb-4 px-4">{text}</p>
+        <span className="text-gray-300 mb-4 px-4 block">{text}</span>
       )}
       <div className="overflow-x-auto scrollbar-hide w-full">
         <div className="inline-flex px-4 py-2 gap-4 w-auto">
