@@ -1,8 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import ChatContainer from '../components/chat/ChatContainer';
 import LoginForm from '../components/auth/LoginForm';
-import Typewriter from 'typewriter-effect';
+
+const TypewriterText = ({ text, delay = 50 }) => {
+  const [displayText, setDisplayText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const animate = useCallback(() => {
+    if (!isDeleting && displayText === text) {
+      setTimeout(() => setIsDeleting(true), 2500);
+      return;
+    }
+    
+    if (isDeleting && displayText === '') {
+      setIsDeleting(false);
+      return;
+    }
+    
+    const target = isDeleting ? '' : text;
+    const delta = isDeleting ? -1 : 1;
+    
+    setTimeout(() => {
+      setDisplayText(prev => {
+        if (isDeleting) return prev.slice(0, -1);
+        return text.slice(0, prev.length + 1);
+      });
+    }, delay);
+  }, [displayText, isDeleting, text, delay]);
+  
+  useEffect(() => {
+    const timer = setTimeout(animate, delay);
+    return () => clearTimeout(timer);
+  }, [animate, delay]);
+  
+  return (
+    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500 font-medium">
+      {displayText}
+      <span className="text-blue-400 animate-pulse">|</span>
+    </span>
+  );
+};
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -38,28 +76,15 @@ export default function Home() {
               <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-3 sm:mb-6 bg-gradient-to-r from-blue-400 via-blue-500 to-blue-400 text-transparent bg-clip-text animate-gradient-x px-2">
                 BetBot
               </h1>
-              <p className="text-base sm:text-lg md:text-2xl text-gray-300 max-w-2xl mx-auto mb-6 sm:mb-12 px-3 leading-relaxed">
-                AI Peer-to-Peer Betting Platform
+              <p className="text-lg sm:text-xl md:text-3xl text-gray-200 max-w-2xl mx-auto mb-8 sm:mb-14 px-4 leading-relaxed text-center font-medium bg-gray-800/50 rounded-lg p-4">
+                AI P2P Betting
               </p>
               <p className="text-sm sm:text-base max-w-xl mx-auto mb-8 px-3">
                 <span className="inline-block p-2 rounded-lg bg-gradient-to-r from-blue-900/50 via-indigo-900/50 to-blue-900/50 backdrop-blur-sm border border-blue-500/20 shadow-lg">
                   <div className="min-h-[24px]">
-                    <Typewriter
-                      onInit={(typewriter) => {
-                        typewriter
-                          .typeString('<span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-300 to-blue-500 font-medium">create custom wagers, get AI insights and cash the fuck out</span>')
-                          .pauseFor(2500)
-                          .deleteAll()
-                          .start();
-                      }}
-                      options={{
-                        autoStart: true,
-                        loop: true,
-                        delay: 50,
-                        deleteSpeed: 30,
-                        cursor: '<span class="text-blue-400">|</span>',
-                        html: true
-                      }}
+                    <TypewriterText 
+                      text="create custom wagers, get AI insights and cash the fuck out"
+                      delay={50}
                     />
                   </div>
                 </span>
