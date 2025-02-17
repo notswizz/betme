@@ -33,14 +33,10 @@ const BetSchema = new mongoose.Schema({
     required: true
   },
   odds: {
-    type: String,
-    required: true
-  },
-  stake: {
     type: Number,
     required: true
   },
-  challengerStake: {
+  stake: {
     type: Number,
     required: true
   },

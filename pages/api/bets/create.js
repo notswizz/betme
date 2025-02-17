@@ -51,23 +51,39 @@ export default async function handler(req, res) {
       });
     }
 
+    // Parse numeric values
+    const numericStake = parseFloat(stake);
+    const numericOdds = parseInt(odds);
+
     // Validate stake against user's token balance
-    if (user.tokenBalance < stake) {
+    if (user.tokenBalance < numericStake) {
       return res.status(400).json({ message: 'Insufficient token balance' });
     }
 
-    // Calculate payout using the same formula as the frontend
-    let payout = parseFloat(stake);
-    const numOdds = parseInt(odds);
-    if (numOdds > 0) {
-      payout += (stake * numOdds) / 100;
-    } else if (numOdds < 0) {
-      payout += (stake * 100) / Math.abs(numOdds);
+    // Calculate payout
+    let payout = numericStake;
+    if (numericOdds > 0) {
+      payout += (numericStake * numericOdds) / 100;
+    } else if (numericOdds < 0) {
+      payout += (numericStake * 100) / Math.abs(numericOdds);
     }
     payout = parseFloat(payout.toFixed(2));
 
     // Calculate challenger stake (what they need to put up to match the bet)
-    const challengerStake = parseFloat((payout - stake).toFixed(2));
+    const winAmount = payout - numericStake;  // How much original bettor can win
+    const challengerStake = parseFloat(winAmount.toFixed(2));  // Challenger risks this amount to win original stake
+
+    console.log('Creating bet with values:', {
+      type,
+      sport,
+      team1,
+      team2,
+      line,
+      odds: numericOdds,
+      stake: numericStake,
+      challengerStake,
+      payout
+    });
 
     // Create bet with exact schema match
     const bet = new Bet({
@@ -77,8 +93,8 @@ export default async function handler(req, res) {
       team1,
       team2,
       line,
-      odds: numOdds,
-      stake: parseFloat(stake),
+      odds: numericOdds,
+      stake: numericStake,
       challengerStake,
       payout,
       status: 'pending',
@@ -88,7 +104,7 @@ export default async function handler(req, res) {
     await bet.save();
 
     // Update user's token balance
-    user.tokenBalance -= parseFloat(stake);
+    user.tokenBalance -= numericStake;
     await user.save();
 
     return res.status(201).json({
@@ -103,6 +119,7 @@ export default async function handler(req, res) {
         line: bet.line,
         odds: bet.odds,
         stake: bet.stake,
+        challengerStake: bet.challengerStake,
         payout: bet.payout,
         status: bet.status
       }

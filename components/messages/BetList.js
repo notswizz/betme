@@ -51,8 +51,18 @@ function BetCard({ bet, onAction }) {
     }
   };
 
-  // Remove the complex calculation and just use the stored value
-  const displayStake = isChallenger ? bet.challengerStake : bet.stake;
+  // Calculate the stake to display
+  const displayStake = canAccept ? 
+    // If user can accept this bet, show the required challenger stake
+    bet.payout - bet.stake 
+    : bet.stake;  // Otherwise show the original stake
+
+  console.log('Stake calculation:', {
+    canAccept,
+    originalStake: bet.stake,
+    payout: bet.payout,
+    calculatedStake: displayStake
+  });
 
   return (
     <div className="relative group w-[85vw] max-w-[320px] sm:w-[300px] flex-shrink-0">
@@ -110,7 +120,7 @@ function BetCard({ bet, onAction }) {
                   {shouldShowAcceptButton() ? 'Required Stake' : 'Your Stake'}
                 </div>
                 <div className="text-white font-semibold text-base">
-                  ${displayStake}
+                  ${displayStake.toFixed(2)}
                 </div>
               </div>
               <div className="text-right">
