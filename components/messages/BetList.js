@@ -41,24 +41,28 @@ function BetCard({ bet, onAction }) {
   // Team highlight colors based on relationship to bet
   const [topHighlight, bottomHighlight] = isMyBet ?
     (isChallenger ?
-      // I'm the challenger, my team (top) is red
+      // I'm the challenger, my team (top) is red, original bettor (bottom) is green
       ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'] :
-      // I'm the original bettor, my team (top) is green
+      // I'm the original bettor, my team (top) is green, challenger (bottom) is red
       ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']) :
     (canAccept ?
-      // I can accept this bet, show my potential team (top) as red
+      // I can accept this bet, original bettor is green (bottom), my potential position is red (top)
       ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'] :
-      // Default view
+      // Default view - original bettor is green (top)
       ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']);
 
-  // Odds highlight colors follow same logic
+  // Odds highlight colors follow same team color logic
   const [topOddsHighlight, bottomOddsHighlight] = isMyBet ?
     (isChallenger ?
-      ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'] :
-      ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']) :
+      // I'm the challenger, my team (top) is red, original bettor (bottom) is green
+      ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-green-400 bg-green-500/10 border border-green-500/20'] :
+      // I'm the original bettor, my team (top) is green, challenger (bottom) is red
+      ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-red-400 bg-red-500/10 border border-red-500/20']) :
     (canAccept ?
-      ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'] :
-      ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']);
+      // I can accept this bet, original bettor is green (bottom), my potential position is red (top)
+      ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-green-400 bg-green-500/10 border border-green-500/20'] :
+      // Default view - original bettor is green (top)
+      ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-red-400 bg-red-500/10 border border-red-500/20']);
 
   console.log('BetCard flags:', {
     betId: bet._id,
