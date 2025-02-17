@@ -15,6 +15,11 @@ export default function ChatArea({
   gameState,
   onBetAction
 }) {
+  console.log('ChatArea props:', {
+    hasMessages: messages.length > 0,
+    hasOnBetAction: !!onBetAction
+  });
+
   return (
     <div className="flex-1 flex flex-col h-full relative overflow-hidden">
       {/* Messages Section */}
@@ -24,18 +29,24 @@ export default function ChatArea({
             <QuickActions onAction={onNewMessage} />
           ) : (
             <div className="space-y-2 py-2">
-              {messages.map((msg, index) => (
-                <div key={index} className="snap-start">
-                  <ChatMessage
-                    message={msg}
-                    onConfirmAction={onConfirmAction}
-                    onCancelAction={onCancelAction}
-                    onAcceptBet={onAcceptBet}
-                    onBetAction={onBetAction}
-                    gameState={gameState}
-                  />
-                </div>
-              ))}
+              {messages.map((msg, index) => {
+                console.log('Rendering message:', {
+                  type: msg.type,
+                  hasOnBetAction: !!onBetAction
+                });
+                return (
+                  <div key={index} className="snap-start">
+                    <ChatMessage
+                      message={msg}
+                      onConfirmAction={onConfirmAction}
+                      onCancelAction={onCancelAction}
+                      onAcceptBet={onAcceptBet}
+                      onBetAction={onBetAction}
+                      gameState={gameState}
+                    />
+                  </div>
+                );
+              })}
               <div ref={messagesEndRef} className="h-2" />
             </div>
           )}

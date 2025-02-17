@@ -3,21 +3,50 @@ import React from 'react';
 function BetCard({ bet, onAction }) {
   console.log('BetCard received bet:', bet);
 
-  // Ensure flags are boolean values
-  const canJudge = Boolean(bet.canJudge);
-  const canAccept = Boolean(bet.canAccept);
+  // Ensure flags are boolean values and properly set based on bet status
+  const canJudge = Boolean(bet.canJudge) || (bet.status === 'matched' && !bet.isMyBet);
+  const canAccept = Boolean(bet.canAccept) || (bet.status === 'pending' && !bet.isMyBet);
+  const isMyBet = Boolean(bet.isMyBet);
 
   console.log('BetCard flags:', {
     betId: bet._id,
     status: bet.status,
     canJudge,
     canAccept,
-    hasJudgeActions: !!bet.judgeActions
+    isMyBet,
+    hasJudgeActions: !!bet.judgeActions,
+    rawBet: bet
   });
 
   // Helper functions now use the boolean values
-  const shouldShowJudgeActions = () => canJudge;
-  const shouldShowAcceptButton = () => canAccept;
+  const shouldShowJudgeActions = () => {
+    return canJudge && !isMyBet && bet.status === 'matched';
+  };
+  
+  const shouldShowAcceptButton = () => {
+    return canAccept && !isMyBet && bet.status === 'pending';
+  };
+
+  const handleAcceptClick = () => {
+    console.log('Accept button clicked for bet:', bet._id);
+    if (onAction) {
+      onAction('accept_bet', { betId: bet._id });
+    }
+  };
+
+  const handleChooseWinner = (winner) => {
+    console.log('Choose winner clicked:', { betId: bet._id, winner });
+    if (onAction) {
+      onAction('choose_winner', { betId: bet._id, winner });
+    }
+  };
+
+  const handleGameNotOver = () => {
+    console.log('Game not over clicked for bet:', bet._id);
+    if (onAction) {
+      onAction('game_not_over', { betId: bet._id });
+    }
+  };
 
   return (
     <div className="relative group snap-center min-w-[300px] w-[300px] mx-2 first:ml-4 last:mr-4">
@@ -83,14 +112,28 @@ function BetCard({ bet, onAction }) {
             </div>
           </div>
 
+          {/* Status Badge */}
+          {isMyBet && (
+            <div className="mt-4">
+              <div className={`text-center py-2 px-4 rounded-lg text-sm font-medium ${
+                bet.status === 'pending' 
+                  ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                  : bet.status === 'matched'
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                  : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
+              }`}>
+                {bet.status === 'pending' ? 'Pending Match' :
+                 bet.status === 'matched' ? 'Matched' :
+                 'Completed'}
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           {shouldShowAcceptButton() && (
             <div className="mt-4">
               <button
-                onClick={() => {
-                  console.log('Accept button clicked for bet:', bet._id);
-                  onAction('accept_bet', { betId: bet._id });
-                }}
+                onClick={handleAcceptClick}
                 className="w-full py-2 px-4 rounded-lg text-sm font-medium bg-gradient-to-r from-green-500 to-green-400 hover:from-green-400 hover:to-green-300 text-white transition-all duration-200 relative group overflow-hidden active:scale-[0.98]"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-[-50%] group-hover:translate-x-[50%]"></div>
@@ -110,10 +153,7 @@ function BetCard({ bet, onAction }) {
                 ].map((team) => (
                   <button
                     key={team.value}
-                    onClick={() => {
-                      console.log('Choose winner clicked:', { betId: bet._id, winner: team.value });
-                      onAction('choose_winner', { betId: bet._id, winner: team.value });
-                    }}
+                    onClick={() => handleChooseWinner(team.value)}
                     className="py-2.5 px-4 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400 text-white transition-all duration-200 relative group overflow-hidden active:scale-[0.98] shadow-lg shadow-blue-500/20"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-[-50%] group-hover:translate-x-[50%]"></div>
@@ -122,10 +162,7 @@ function BetCard({ bet, onAction }) {
                 ))}
               </div>
               <button
-                onClick={() => {
-                  console.log('Game not over clicked for bet:', bet._id);
-                  onAction('game_not_over', { betId: bet._id });
-                }}
+                onClick={handleGameNotOver}
                 className="w-full py-2.5 px-4 rounded-lg text-sm font-medium bg-gradient-to-r from-gray-700 to-gray-600 hover:from-gray-600 hover:to-gray-500 text-white transition-all duration-200 relative group overflow-hidden active:scale-[0.98] shadow-lg shadow-gray-800/20"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-x-[-50%] group-hover:translate-x-[50%]"></div>
@@ -150,7 +187,7 @@ function BetCard({ bet, onAction }) {
 }
 
 export default function BetList({ bets, text, onAction }) {
-  console.log('BetList received props:', { bets, text });
+  console.log('BetList received props:', { bets, text, hasOnAction: !!onAction });
 
   // Ensure bets is an array
   const betArray = Array.isArray(bets) ? bets : [];

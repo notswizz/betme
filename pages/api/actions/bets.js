@@ -31,16 +31,15 @@ export async function getBets(userId, action = 'view_open_bets') {
     // Build query based on action
     switch (action) {
       case 'view_my_bets':
-        // Show all bets where user is either creator or challenger
         query = { 
           $or: [
-            { userId: userObjectId }, // All bets created by user
-            { challengerId: userObjectId } // All bets accepted by user
+            { userId: userObjectId },
+            { challengerId: userObjectId }
           ]
         };
+        messageText = 'Here are your bets:';
         break;
       case 'judge_bets':
-        // Show only matched bets where user is not involved
         query = {
           status: 'matched',
           $and: [
@@ -48,17 +47,19 @@ export async function getBets(userId, action = 'view_open_bets') {
             { challengerId: { $ne: userObjectId } }
           ]
         };
+        messageText = 'Here are the matched bets available for judging:';
         break;
       default: // view_open_bets
-        // Show only pending bets from other users
         query = {
           status: 'pending',
           userId: { $ne: userObjectId },
           challengerId: null
         };
+        messageText = 'Here are the open bets you can accept:';
     }
 
-    console.log('Final query:', JSON.stringify(query, null, 2));
+    console.log('Query for action:', action);
+    console.log('Query details:', JSON.stringify(query, null, 2));
     
     // Get bets with query and sort by most recent first
     const bets = await Bet.find(query)
@@ -67,7 +68,14 @@ export async function getBets(userId, action = 'view_open_bets') {
       .populate('challengerId', 'username')
       .lean();
     
-    console.log('Raw bets from query:', JSON.stringify(bets, null, 2));
+    console.log('Found bets count:', bets.length);
+    console.log('First bet details:', bets[0] ? {
+      _id: bets[0]._id,
+      status: bets[0].status,
+      userId: bets[0].userId._id,
+      challengerId: bets[0].challengerId,
+      currentUserId: userObjectId
+    } : 'No bets found');
 
     // Format the bets
     const formattedBets = bets.map(bet => {
@@ -82,15 +90,25 @@ export async function getBets(userId, action = 'view_open_bets') {
                        bet.userId._id.toString() !== userObjectId.toString() &&
                        bet.challengerId === null;
 
-      console.log('Processing bet:', {
+      const isMyBet = action === 'view_my_bets' && (
+        bet.userId._id.toString() === userObjectId.toString() ||
+        bet.challengerId?._id?.toString() === userObjectId.toString()
+      );
+
+      console.log('Processing bet flags:', {
         betId: bet._id.toString(),
         status: bet.status,
         action,
         isJudgeable,
         canAccept,
-        userId: bet.userId._id.toString(),
-        challengerId: bet.challengerId?._id?.toString(),
-        currentUserId: userObjectId.toString()
+        isMyBet,
+        conditions: {
+          isViewOpenBets: action === 'view_open_bets',
+          isPending: bet.status === 'pending',
+          isNotCreator: bet.userId._id.toString() !== userObjectId.toString(),
+          hasNoChallenger: bet.challengerId === null,
+          isMyBet
+        }
       });
 
       // Create the base bet object with flags explicitly set to boolean values
@@ -113,47 +131,19 @@ export async function getBets(userId, action = 'view_open_bets') {
         matchedAt: bet.matchedAt ? new Date(bet.matchedAt).toLocaleString() : null,
         votes: bet.votes || [],
         canJudge: Boolean(isJudgeable),
-        canAccept: Boolean(canAccept)
+        canAccept: Boolean(canAccept),
+        isMyBet: Boolean(isMyBet)
       };
-
-      // Add judge actions if applicable
-      if (isJudgeable) {
-        formattedBet.judgeActions = {
-          chooseWinner: {
-            teams: [
-              { name: bet.team1, value: bet.team1 },
-              { name: bet.team2, value: bet.team2 }
-            ]
-          }
-        };
-      }
 
       return formattedBet;
     });
 
-    // Get appropriate message text
-    switch (action) {
-      case 'view_my_bets':
-        messageText = formattedBets.length > 0 
-          ? 'Here are all your bets, both created and matched:' 
-          : "You haven't placed any bets yet. Would you like to place one?";
-        break;
-      case 'judge_bets':
-        messageText = formattedBets.length > 0 
-          ? 'Here are the matched bets available for judging. Choose a winner or indicate if the game is not over yet:' 
-          : "There are no matched bets available for judging at the moment.";
-        break;
-      default: // view_open_bets
-        messageText = formattedBets.length > 0 
-          ? 'Here are the open bets you can accept:' 
-          : 'No open bets available at the moment. Would you like to create one?';
-    }
-
-    console.log('Returning formatted bets:', formattedBets.map(bet => ({
+    console.log('Formatted bets flags:', formattedBets.map(bet => ({
       _id: bet._id,
       status: bet.status,
       canJudge: bet.canJudge,
-      canAccept: bet.canAccept
+      canAccept: bet.canAccept,
+      isMyBet: bet.isMyBet
     })));
 
     return {

@@ -566,6 +566,55 @@ export default async function handler(req, res) {
         });
       }
 
+      // Handle bet-related actions
+      if (responseMessage.content.toLowerCase().includes('show me my bets') || 
+          responseMessage.content.toLowerCase().includes('view my bets')) {
+        console.log('Fetching user bets...');
+        const bets = await getBets(userId, 'view_my_bets');
+        console.log('Fetched bets:', bets);
+        
+        return res.status(200).json({
+          message: {
+            role: 'assistant',
+            type: 'bet_list',
+            content: bets,
+            text: 'Here are your bets:'
+          }
+        });
+      }
+
+      if (responseMessage.content.toLowerCase().includes('show me open bets') || 
+          responseMessage.content.toLowerCase().includes('view open bets')) {
+        console.log('Fetching open bets...');
+        const bets = await getBets(userId, 'view_open_bets');
+        console.log('Fetched bets:', bets);
+        
+        return res.status(200).json({
+          message: {
+            role: 'assistant',
+            type: 'bet_list',
+            content: bets,
+            text: 'Here are the open bets you can accept:'
+          }
+        });
+      }
+
+      if (responseMessage.content.toLowerCase().includes('show me bets to judge') || 
+          responseMessage.content.toLowerCase().includes('view bets to judge')) {
+        console.log('Fetching judgeable bets...');
+        const bets = await getBets(userId, 'judge_bets');
+        console.log('Fetched bets:', bets);
+        
+        return res.status(200).json({
+          message: {
+            role: 'assistant',
+            type: 'bet_list',
+            content: bets,
+            text: 'Here are the matched bets available for judging:'
+          }
+        });
+      }
+
       // For other messages, save and return
       if (messages.length > 0) {
         conversation.messages.push({

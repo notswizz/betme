@@ -146,7 +146,11 @@ export default function ChatContainer() {
         // For bet lists, just add the message
         else if (newMessage.type === 'bet_list') {
           console.log('Adding bet list message:', newMessage);
-          setMessages(prev => [...prev, newMessage]);
+          // Remove any previous bet lists
+          setMessages(prev => {
+            const withoutBetLists = prev.filter(msg => msg.type !== 'bet_list');
+            return [...withoutBetLists, newMessage];
+          });
         }
         // For all other messages, add if they have content
         else if (typeof newMessage.content === 'string' ? newMessage.content.trim() : newMessage.content) {
@@ -280,7 +284,7 @@ export default function ChatContainer() {
       setIsLoading(true);
       setError(null);
 
-      console.log('Handling bet action:', { action, data });
+      console.log('Handling bet action in ChatContainer:', { action, data });
 
       if (action === 'accept_bet') {
         const response = await fetch('/api/actions/acceptBet', {

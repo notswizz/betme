@@ -139,22 +139,27 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, onB
             canAccept: bets[0].canAccept,
             hasJudgeActions: !!bets[0].judgeActions
           } : null,
+          hasOnBetAction: !!onBetAction,
           rawMessage: message
         });
 
-        // Use the parsed bets array instead of message.content
-        return <BetList 
-          bets={bets} 
-          text={message.text}
-          onAction={(action, data) => {
-            console.log('Bet action triggered in ChatMessage:', { action, data });
-            if (action === 'accept_bet') {
-              onAcceptBet(data);
-            } else if (action === 'choose_winner' || action === 'game_not_over') {
-              onConfirmAction({ name: action, ...data });
-            }
-          }}
-        />;
+        // Pass the correct action handler
+        return (
+          <div className="w-full">
+            <BetList 
+              bets={bets} 
+              text={message.text}
+              onAction={(action, data) => {
+                console.log('Bet action triggered in ChatMessage:', { action, data });
+                if (onBetAction) {
+                  onBetAction(action, data);
+                } else {
+                  console.error('No bet action handler provided to ChatMessage');
+                }
+              }}
+            />
+          </div>
+        );
       case 'image':
         return <ImagePreview image={content} onUpload={onImageUpload} />;
       case 'betslip':
@@ -181,7 +186,7 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, onB
     <div className="w-full mb-4">
       {isLoading ? renderLoading() : (
         <div className={`flex w-full ${isUser ? 'justify-end' : 'justify-start'}`}>
-          <div className={`flex max-w-[85%] items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div className={`flex ${type === 'bet_list' ? 'w-full' : 'max-w-[85%]'} items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
             <MessageAvatar isUser={isUser} />
             {renderMessageContent()}
           </div>
