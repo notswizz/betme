@@ -17,20 +17,20 @@ export default function Home() {
     <>
       <Head>
         <title>BetBot - AI Powered Peer-to-Peer Sports Betting Chatbot</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-        <meta name="description" content="BetBot is your AI-powered peer-to-peer sports betting chatbot. Create custom wagers, get real-time insights, and connect with other bettors in a secure environment." />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+        <meta name="description" content="BetBot is your AI peer-to-peer sports betting chatbot. Create custom wagers, get real-time insights, and connect with other bettors in a secure environment." />
         <meta name="keywords" content="BetBot, sports betting, AI chatbot, peer-to-peer betting, P2P betting, sports wagering, betting assistant" />
-        <meta property="og:title" content="BetBot - AI Powered Peer-to-Peer Sports Betting Chatbot" />
+        <meta property="og:title" content="BetBot - AI Peer-to-Peer Sports Betting Chatbot" />
         <meta property="og:description" content="Experience the future of sports betting with BetBot - your AI-powered peer-to-peer betting assistant. Create custom wagers and get real-time insights." />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="BetBot - AI Sports Betting Chatbot" />
-        <meta name="twitter:description" content="Your AI-powered peer-to-peer sports betting companion. Create wagers, get insights, connect with bettors." />
+        <meta name="twitter:description" content="Your AI peer-to-peer sports betting companion. Create wagers, get insights, connect with bettors." />
         <link rel="icon" type="image/png" href="/betbot.png" />
       </Head>
 
       {!isAuthenticated ? (
-        <div className="min-h-[100dvh] bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
+        <div className="min-h-[100dvh] bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 w-full overflow-hidden">
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-16">
             {/* Hero Section */}
             <div className="text-center mb-8 sm:mb-20">
@@ -38,10 +38,10 @@ export default function Home() {
                 BetBot
               </h1>
               <p className="text-base sm:text-lg md:text-2xl text-gray-300 max-w-2xl mx-auto mb-6 sm:mb-12 px-3 leading-relaxed">
-                The First AI-Powered Peer-to-Peer Sports Betting Platform
+                The First AI Peer-to-Peer Sports Betting Platform
               </p>
               <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto mb-8 px-3">
-                Create custom wagers, get AI-powered insights, and connect with other bettors - all in one secure platform
+                Create custom wagers, get AI insights, and connect with other bettors - all in one secure platform
               </p>
               <div className="w-full max-w-[280px] sm:max-w-sm mx-auto px-2">
                 <LoginForm onSuccess={() => setIsAuthenticated(true)} />
@@ -53,7 +53,7 @@ export default function Home() {
               <div className="bg-gray-800/50 p-5 sm:p-6 rounded-xl border border-gray-700 hover:border-blue-500 transition-all duration-300 active:scale-[0.98] touch-manipulation">
                 <div className="flex items-center space-x-3 mb-3">
                   <div className="text-2xl sm:text-3xl">🤖</div>
-                  <h3 className="text-lg sm:text-xl font-semibold text-white">AI-Powered Insights</h3>
+                  <h3 className="text-lg sm:text-xl font-semibold text-white">AI Insights</h3>
                 </div>
                 <p className="text-gray-400 text-sm sm:text-base leading-relaxed">Get real-time betting analysis, odds comparisons, and personalized recommendations from our advanced AI chatbot</p>
               </div>
@@ -96,8 +96,8 @@ export default function Home() {
           </div>
         </div>
       ) : (
-        <div className="h-[100dvh] overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
-          <div className="flex flex-col h-full">
+        <div className="h-[100dvh] w-full overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
+          <div className="flex flex-col h-full w-full">
             <ChatContainer />
           </div>
         </div>

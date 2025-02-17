@@ -138,7 +138,7 @@ function BetCard({ bet, onAction }) {
   });
 
   return (
-    <div className="relative group w-[85vw] max-w-[320px] sm:w-[300px] flex-shrink-0">
+    <div className="relative group w-[80vw] max-w-[300px] sm:w-[280px] flex-shrink-0">
       {/* Animated border effect */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-xl opacity-30 group-hover:opacity-100 blur transition duration-500 group-hover:duration-200 animate-gradient-xy pointer-events-none"></div>
       
@@ -313,12 +313,12 @@ export default function BetList({ bets, text, onAction }) {
   }
 
   return (
-    <div className="w-full -mx-4">
+    <div className="w-full">
       {text && (
         <p className="text-gray-300 mb-4 px-4">{text}</p>
       )}
-      <div className="overflow-x-auto scrollbar-hide">
-        <div className="inline-flex px-4 py-2 gap-4 min-w-max">
+      <div className="overflow-x-auto scrollbar-hide w-full">
+        <div className="inline-flex px-4 py-2 gap-4 w-auto">
           {betArray.map((bet) => (
             <BetCard key={bet._id} bet={bet} onAction={onAction} />
           ))}

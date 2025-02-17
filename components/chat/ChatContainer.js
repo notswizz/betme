@@ -378,7 +378,7 @@ export default function ChatContainer() {
   };
 
   return (
-    <div className="flex h-full relative">
+    <div className="flex h-full relative w-full overflow-hidden">
       <SideMenu 
         isSideMenuOpen={isSideMenuOpen} 
         onNewChat={startNewChat}
@@ -395,7 +395,7 @@ export default function ChatContainer() {
         }}
       />
       
-      <div className="flex-1 flex flex-col h-full relative">
+      <div className="flex-1 flex flex-col h-full w-full relative overflow-hidden">
         <Header onLogout={handleLogout} onMenuToggle={() => setIsSideMenuOpen(!isSideMenuOpen)} />
         
         <ChatArea
