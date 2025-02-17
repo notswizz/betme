@@ -5,6 +5,7 @@ import Header from '../container/Header';
 import SideMenu from '../container/SideMenu';
 import ChatArea from '../container/ChatArea';
 import PlayerStatsCard from '../messages/PlayerStatsCard';
+import BetList from '../messages/BetList';
 
 export default function ChatContainer() {
   const [messages, setMessages] = useState([]);
@@ -144,6 +145,7 @@ export default function ChatContainer() {
         }
         // For bet lists, just add the message
         else if (newMessage.type === 'bet_list') {
+          console.log('Adding bet list message:', newMessage);
           setMessages(prev => [...prev, newMessage]);
         }
         // For all other messages, add if they have content
@@ -273,6 +275,104 @@ export default function ChatContainer() {
     }
   };
 
+  const handleBetAction = async (action, data) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      console.log('Handling bet action:', { action, data });
+
+      if (action === 'accept_bet') {
+        const response = await fetch('/api/actions/acceptBet', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ betId: data.betId })
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to accept bet');
+        }
+
+        // Add success message
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          type: 'text',
+          content: `✅ Bet accepted successfully!`
+        }]);
+
+        // Refresh token balance
+        fetchTokenBalance();
+
+        // Refresh the bets list
+        handleNewMessage('Show open bets');
+      } 
+      else if (action === 'choose_winner' || action === 'game_not_over') {
+        const response = await fetch('/api/actions/judge', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            action,
+            betId: data.betId,
+            winner: data.winner // only for choose_winner action
+          })
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to process judging action');
+        }
+
+        // Add success message
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          type: 'text',
+          content: action === 'choose_winner' 
+            ? `✅ Vote recorded for ${data.winner}`
+            : '✅ Marked game as not over yet'
+        }]);
+
+        // Refresh the bets list
+        handleNewMessage('Show bets to judge');
+      }
+    } catch (error) {
+      console.error('Error handling bet action:', error);
+      setError(error.message);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        type: 'text',
+        content: `❌ ${error.message || 'Failed to process action. Please try again.'}`
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const renderMessage = (message) => {
+    switch (message.type) {
+      case 'bet_list':
+        return (
+          <BetList
+            bets={message.content}
+            text={message.text}
+            onAction={handleBetAction}
+          />
+        );
+      case 'player_stats':
+        return <PlayerStatsCard stats={message.content} />;
+      default:
+        return message.content;
+    }
+  };
+
   return (
     <div className="flex h-full relative">
       <SideMenu 
@@ -302,8 +402,10 @@ export default function ChatContainer() {
           onConfirmAction={handleConfirmAction}
           onCancelAction={handleCancelAction}
           onAcceptBet={handleAcceptBet}
+          onBetAction={handleBetAction}
           loadingStats={loadingStats}
           messagesEndRef={messagesEndRef}
+          gameState={currentGameState}
         />
       </div>
     </div>

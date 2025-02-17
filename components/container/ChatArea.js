@@ -12,7 +12,8 @@ export default function ChatArea({
   onCancelAction,
   onAcceptBet,
   messagesEndRef,
-  gameState
+  gameState,
+  onBetAction
 }) {
   return (
     <div className="flex-1 flex flex-col h-full relative overflow-hidden">
@@ -30,6 +31,7 @@ export default function ChatArea({
                     onConfirmAction={onConfirmAction}
                     onCancelAction={onCancelAction}
                     onAcceptBet={onAcceptBet}
+                    onBetAction={onBetAction}
                     gameState={gameState}
                   />
                 </div>

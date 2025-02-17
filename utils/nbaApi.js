@@ -45,4 +45,61 @@ export async function getGameById(gameId) {
 
 export function formatGameStatus(status) {
   return nbaClient.formatGameStatus(status);
+}
+
+// NBA API functions
+export async function handleBasketballQuery(query) {
+  // TODO: Implement actual NBA API integration
+  return {
+    success: true,
+    message: "Basketball query handled"
+  };
+}
+
+export async function getTeamStats(team) {
+  // TODO: Implement actual NBA API integration
+  return {
+    success: true,
+    stats: {}
+  };
+}
+
+export async function getLiveGameStats(gameId) {
+  // TODO: Implement actual NBA API integration
+  return {
+    success: true,
+    stats: {}
+  };
+}
+
+export async function getSeasonLeaders() {
+  // TODO: Implement actual NBA API integration
+  return {
+    success: true,
+    leaders: []
+  };
+}
+
+export async function getPlayerStats(playerName) {
+  // TODO: Implement actual NBA API integration
+  return {
+    success: true,
+    stats: {}
+  };
+}
+
+export async function getTeamNextGame(team) {
+  // TODO: Implement actual NBA API integration
+  return {
+    success: true,
+    game: {}
+  };
+}
+
+export async function fetchPlayerStatistics(playerName) {
+  // TODO: Implement actual NBA API integration
+  return {
+    success: true,
+    statistics: {}
+  };
 } 

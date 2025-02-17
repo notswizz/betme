@@ -9,6 +9,7 @@ import PlayerStatsCard from '../messages/PlayerStatsCard';
 import { memo } from 'react';
 import { BetSlipMessage } from './BetSlipMessage';
 import { getCurrentUserId } from '../../utils/auth';
+import BetList from '../messages/BetList';
 
 const loadingGifs = [
     "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExenZlN21oM2V4amt5emNqc2tpMmlyMXhhMm0yMTVyMGxlMjl4OGQ5YSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3o7qDFg6xkLxOVdZTi/giphy.gif",
@@ -28,7 +29,7 @@ const MemoizedBetSlipWrapper = memo(function BetSlipWrapper({ data, onSubmit }) 
   );
 });
 
-const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, gameState }) => {
+const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, onBetAction, gameState }) => {
   const { role, type, content } = message;
   const isUser = role === 'user';
   const currentUserId = getCurrentUserId();
@@ -37,7 +38,7 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, gam
   const [isLoading, setIsLoading] = useState(false);
   const [loadingGif, setLoadingGif] = useState('');
 
-  const handleAcceptBet = async (bet) => {
+  const handleAcceptBet = async (betId) => {
     setLoadingGif(loadingGifs[Math.floor(Math.random() * loadingGifs.length)]);
     setIsLoading(true);
     try {
@@ -47,7 +48,7 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, gam
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ betId: bet._id })
+        body: JSON.stringify({ betId })
       });
 
       const data = await response.json();
@@ -128,12 +129,31 @@ const ChatMessage = ({ message, onConfirmAction, onImageUpload, onAcceptBet, gam
       case 'bet_list':
         // Parse the content if it's a string
         const bets = typeof content === 'string' ? JSON.parse(content) : content;
-        return <BetListMessage 
+        console.log('Bet list data in ChatMessage:', {
+          messageType: type,
+          betsCount: bets.length,
+          firstBet: bets[0] ? {
+            _id: bets[0]._id,
+            status: bets[0].status,
+            canJudge: bets[0].canJudge,
+            canAccept: bets[0].canAccept,
+            hasJudgeActions: !!bets[0].judgeActions
+          } : null,
+          rawMessage: message
+        });
+
+        // Use the parsed bets array instead of message.content
+        return <BetList 
           bets={bets} 
-          onAcceptBet={handleAcceptBet}
-          onCompleteBet={handleCompleteBet}
-          currentUserId={currentUserId}
-          isMyBets={message.action === 'view_my_bets'}
+          text={message.text}
+          onAction={(action, data) => {
+            console.log('Bet action triggered in ChatMessage:', { action, data });
+            if (action === 'accept_bet') {
+              onAcceptBet(data);
+            } else if (action === 'choose_winner' || action === 'game_not_over') {
+              onConfirmAction({ name: action, ...data });
+            }
+          }}
         />;
       case 'image':
         return <ImagePreview image={content} onUpload={onImageUpload} />;
