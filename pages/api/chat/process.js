@@ -439,9 +439,6 @@ export default async function handler(req, res) {
       // Connect to database first
       await connectDB();
       
-      // Initialize User model after connection
-      User = getModel();
-      
       // Get user ID from token
       const token = req.headers.authorization?.split(' ')[1];
       const userId = await verifyToken(token);
