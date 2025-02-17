@@ -7,6 +7,13 @@ function BetCard({ bet, onAction }) {
   const isMyBet = Boolean(bet.isMyBet);
   const canJudge = Boolean(bet.canJudge) && !isMyBet;
   const canAccept = Boolean(bet.canAccept) && !isMyBet;
+  const isChallenger = Boolean(bet.isChallenger);
+
+  // Determine which teams to show first based on perspective
+  const [topTeam, bottomTeam] = isChallenger ? [bet.team2, bet.team1] : [bet.team1, bet.team2];
+  const [topOdds, bottomLine] = isChallenger ? 
+    [bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line, bet.odds] :
+    [bet.odds, bet.line === 'ML' ? 'ML' : parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line];
 
   console.log('BetCard flags:', {
     betId: bet._id,
@@ -14,6 +21,7 @@ function BetCard({ bet, onAction }) {
     canJudge,
     canAccept,
     isMyBet,
+    isChallenger,
     hasJudgeActions: !!bet.judgeActions,
     rawBet: bet
   });
@@ -42,6 +50,26 @@ function BetCard({ bet, onAction }) {
       onAction('game_not_over', { betId: bet._id });
     }
   };
+
+  // Calculate challenger stake based on odds
+  const calculateChallengerStake = () => {
+    if (bet.challengerStake) return bet.challengerStake;
+    
+    const odds = parseFloat(bet.odds);
+    if (isNaN(odds)) return bet.stake;
+
+    if (odds > 0) {
+      // For positive odds (e.g. +150), challenger needs to risk more
+      // If original bettor puts up $100 at +150, challenger risks $150 to win $100
+      return parseFloat((bet.stake * Math.abs(odds) / 100).toFixed(2));
+    } else {
+      // For negative odds (e.g. -110), challenger needs to risk more
+      // If original bettor puts up $100 at -110, challenger risks $110 to win $100
+      return parseFloat((bet.stake * Math.abs(odds) / 100).toFixed(2));
+    }
+  };
+
+  const displayStake = isChallenger ? calculateChallengerStake() : bet.stake;
 
   return (
     <div className="relative group w-[85vw] max-w-[320px] sm:w-[300px] flex-shrink-0">
@@ -72,23 +100,21 @@ function BetCard({ bet, onAction }) {
             <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-green-500/30 group-hover:border-green-500/50 transition-colors">
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">
-                  {bet.team1}
+                  {topTeam}
                 </div>
               </div>
               <div className="text-green-400 text-sm font-bold whitespace-nowrap px-2.5 py-1 rounded bg-green-500/10 border border-green-500/20">
-                {bet.odds}
+                {topOdds}
               </div>
             </div>
             <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-red-500/30 group-hover:border-red-500/50 transition-colors">
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">
-                  {bet.team2}
+                  {bottomTeam}
                 </div>
               </div>
               <div className="text-xs text-blue-400 font-medium px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20">
-                Line: {bet.line === 'ML' ? 'ML' : 
-                  isNaN(bet.line) ? bet.line :
-                  parseFloat(bet.line) > 0 ? `+${bet.line}` : bet.line}
+                Line: {bottomLine}
               </div>
             </div>
           </div>
@@ -97,8 +123,12 @@ function BetCard({ bet, onAction }) {
           <div className="mt-3.5 space-y-2">
             <div className="flex items-center justify-between py-2.5 px-3.5 rounded-lg bg-gray-800/50 border border-gray-700/30">
               <div>
-                <div className="text-gray-500 text-xs mb-0.5">Stake</div>
-                <div className="text-white font-semibold text-base">${bet.stake}</div>
+                <div className="text-gray-500 text-xs mb-0.5">
+                  {shouldShowAcceptButton() ? 'Required Stake' : 'Your Stake'}
+                </div>
+                <div className="text-white font-semibold text-base">
+                  ${displayStake}
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-gray-500 text-xs mb-0.5">Total Payout</div>
@@ -143,8 +173,8 @@ function BetCard({ bet, onAction }) {
               <div className="text-sm font-medium text-gray-300 mb-2">Choose Winner:</div>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { name: bet.team1, value: bet.team1 },
-                  { name: bet.team2, value: bet.team2 }
+                  { name: topTeam, value: isChallenger ? bet.team2 : bet.team1 },
+                  { name: bottomTeam, value: isChallenger ? bet.team1 : bet.team2 }
                 ].map((team) => (
                   <button
                     key={team.value}
