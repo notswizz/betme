@@ -24,18 +24,20 @@ export default function ChatArea({
     <div className="flex-1 flex flex-col h-full relative overflow-hidden">
       {/* Messages Section */}
       <div className="flex-1 overflow-y-auto pt-20 pb-20 overscroll-none">
-        <div className="w-full max-w-4xl mx-auto px-4">
+        <div className="w-full max-w-4xl mx-auto">
           {messages.length === 0 ? (
-            <QuickActions onAction={onNewMessage} />
+            <div className="px-4">
+              <QuickActions onAction={onNewMessage} />
+            </div>
           ) : (
-            <div className="space-y-2 py-2">
+            <div className="space-y-6">
               {messages.map((msg, index) => {
                 console.log('Rendering message:', {
                   type: msg.type,
                   hasOnBetAction: !!onBetAction
                 });
                 return (
-                  <div key={index} className="snap-start">
+                  <div key={index}>
                     <ChatMessage
                       message={msg}
                       onConfirmAction={onConfirmAction}
