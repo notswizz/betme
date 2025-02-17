@@ -1,11 +1,12 @@
-import connectDB from '@/utils/mongodb';
+import connectDBWithModels from '@/utils/mongodb';
 import User from '@/models/User';
 import Bet from '@/models/Bet';
 import mongoose from 'mongoose';
 
 export async function getBets(userId, action = 'view_open_bets') {
   try {
-    await connectDB();
+    // Connect to DB and ensure models are registered
+    await connectDBWithModels();
     console.log('Getting bets with action:', action, 'for userId:', userId);
     
     // Ensure userId is a valid string before converting to ObjectId

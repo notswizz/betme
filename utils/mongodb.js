@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error('MongoDB URI is missing');
+  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
 }
 
 let cached = global.mongoose;
@@ -13,47 +13,52 @@ if (!cached) {
 }
 
 async function connectDB() {
-  try {
-    if (cached.conn) {
-      return cached.conn;
-    }
-
-    if (!cached.promise) {
-      const opts = {
-        bufferCommands: false,
-        dbName: 'chatbet',  // Force database name
-        useNewUrlParser: true,
-        useUnifiedTopology: true
-      };
-
-      // Parse the connection string to remove any database name if present
-      let uri = MONGODB_URI;
-      if (uri.includes('?')) {
-        uri = uri.replace(/\/[^/?]+\?/, '/chatbet?');
-      } else {
-        uri = uri + '/chatbet';
-      }
-
-      // Clear all models from the cache
-      Object.keys(mongoose.models).forEach(modelName => {
-        delete mongoose.models[modelName];
-      });
-
-      cached.promise = mongoose.connect(uri, opts).then((mongoose) => {
-        console.log('Connected to MongoDB database:', mongoose.connection.db.databaseName);
-        return mongoose;
-      });
-    }
-
-    cached.conn = await cached.promise;
+  if (cached.conn) {
     return cached.conn;
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    throw error;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      return mongoose;
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    throw e;
+  }
+
+  return cached.conn;
+}
+
+// Ensure all models are registered
+function registerModels() {
+  // Only register models if they haven't been registered yet
+  if (!mongoose.models.User) {
+    require('@/models/User');
+  }
+  if (!mongoose.models.Bet) {
+    require('@/models/Bet');
+  }
+  if (!mongoose.models.Conversation) {
+    require('@/models/Conversation');
   }
 }
 
-export default connectDB;
+// Export an enhanced connect function that ensures models are registered
+export default async function connectDBWithModels() {
+  const conn = await connectDB();
+  registerModels();
+  return conn;
+}
+
+export { connectDB, registerModels };
 
 // Helper functions using Mongoose
 export async function getUser(userId) {
