@@ -415,7 +415,7 @@ async function handleBetConfirmation(userId, betData) {
       throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
-    // Get user
+    // Get user with username field explicitly selected
     console.log('Fetching user with ID:', userId);
     const user = await User.findById(userId).select('+username');
     console.log('Found user:', {
@@ -443,10 +443,10 @@ async function handleBetConfirmation(userId, betData) {
       throw new Error(`Insufficient tokens. Required: ${stake}, Available: ${user.tokenBalance}`);
     }
 
-    // Create new bet
+    // Create new bet with userUsername explicitly set
     const newBet = new Bet({
       userId,
-      userUsername: user.username,
+      userUsername: user.username, // Explicitly set userUsername
       type: bet.type === 'betslip' ? 'Moneyline' : bet.type || 'Moneyline',
       sport: bet.sport || 'NBA',
       team1: bet.team1,
