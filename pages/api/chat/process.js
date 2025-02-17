@@ -280,24 +280,63 @@ async function getBets(userId, action = 'view_open_bets') {
     console.log('Raw bets from query:', JSON.stringify(bets, null, 2));
 
     // Format the bets
-    const formattedBets = bets.map(bet => ({
-      _id: bet._id.toString(),
-      userId: bet.userId._id ? bet.userId._id.toString() : bet.userId.toString(),
-      userUsername: bet.userId.username || 'Unknown User',
-      challengerId: bet.challengerId ? (bet.challengerId._id ? bet.challengerId._id.toString() : bet.challengerId.toString()) : null,
-      challengerUsername: bet.challengerId ? (bet.challengerId.username || 'Unknown Challenger') : null,
-      type: bet.type || 'Moneyline',
-      sport: bet.sport || 'NBA',
-      team1: bet.team1,
-      team2: bet.team2,
-      line: bet.line || 'ML',
-      odds: bet.odds,
-      stake: parseFloat(bet.stake).toFixed(2),
-      payout: parseFloat(bet.payout).toFixed(2),
-      status: bet.status,
-      createdAt: new Date(bet.createdAt).toLocaleString(),
-      matchedAt: bet.matchedAt ? new Date(bet.matchedAt).toLocaleString() : null
-    }));
+    const formattedBets = bets.map(bet => {
+      // Determine view-specific properties
+      const isJudgeable = action === 'judge_bets' && 
+                         bet.status === 'matched' && 
+                         bet.userId._id.toString() !== userObjectId.toString() && 
+                         (!bet.challengerId || bet.challengerId._id.toString() !== userObjectId.toString());
+
+      const canAccept = action === 'view_open_bets' && 
+                       bet.status === 'pending' && 
+                       bet.userId._id.toString() !== userObjectId.toString() &&
+                       !bet.challengerId;
+
+      const isMyBet = action === 'view_my_bets' && (
+        bet.userId._id.toString() === userObjectId.toString() ||
+        (bet.challengerId && bet.challengerId._id.toString() === userObjectId.toString())
+      );
+
+      console.log('Processing bet flags:', {
+        betId: bet._id.toString(),
+        status: bet.status,
+        action,
+        isJudgeable,
+        canAccept,
+        isMyBet,
+        conditions: {
+          isViewOpenBets: action === 'view_open_bets',
+          isPending: bet.status === 'pending',
+          isNotCreator: bet.userId._id.toString() !== userObjectId.toString(),
+          hasNoChallenger: !bet.challengerId,
+          isMyBet
+        }
+      });
+
+      // Create the base bet object with flags explicitly set to boolean values
+      return {
+        _id: bet._id.toString(),
+        userId: bet.userId._id.toString(),
+        userUsername: bet.userId.username || 'Unknown User',
+        challengerId: bet.challengerId ? bet.challengerId._id.toString() : null,
+        challengerUsername: bet.challengerId ? bet.challengerId.username : null,
+        type: bet.type || 'Moneyline',
+        sport: bet.sport || 'NBA',
+        team1: bet.team1,
+        team2: bet.team2,
+        line: bet.line || 'ML',
+        odds: bet.odds,
+        stake: parseFloat(bet.stake).toFixed(2),
+        payout: parseFloat(bet.payout).toFixed(2),
+        status: bet.status,
+        createdAt: new Date(bet.createdAt).toLocaleString(),
+        matchedAt: bet.matchedAt ? new Date(bet.matchedAt).toLocaleString() : null,
+        votes: bet.votes || [],
+        canJudge: isJudgeable,
+        canAccept: canAccept,
+        isMyBet: isMyBet
+      };
+    });
 
     // Get appropriate message text
     switch (action) {
@@ -567,8 +606,9 @@ export default async function handler(req, res) {
       }
 
       // Handle bet-related actions
-      if (responseMessage.content.toLowerCase().includes('show me my bets') || 
-          responseMessage.content.toLowerCase().includes('view my bets')) {
+      if (typeof responseMessage.content === 'string' && (
+          responseMessage.content.toLowerCase().includes('show me my bets') || 
+          responseMessage.content.toLowerCase().includes('view my bets'))) {
         console.log('Fetching user bets...');
         const bets = await getBets(userId, 'view_my_bets');
         console.log('Fetched bets:', bets);
@@ -583,8 +623,9 @@ export default async function handler(req, res) {
         });
       }
 
-      if (responseMessage.content.toLowerCase().includes('show me open bets') || 
-          responseMessage.content.toLowerCase().includes('view open bets')) {
+      if (typeof responseMessage.content === 'string' && (
+          responseMessage.content.toLowerCase().includes('show me open bets') || 
+          responseMessage.content.toLowerCase().includes('view open bets'))) {
         console.log('Fetching open bets...');
         const bets = await getBets(userId, 'view_open_bets');
         console.log('Fetched bets:', bets);
@@ -599,8 +640,9 @@ export default async function handler(req, res) {
         });
       }
 
-      if (responseMessage.content.toLowerCase().includes('show me bets to judge') || 
-          responseMessage.content.toLowerCase().includes('view bets to judge')) {
+      if (typeof responseMessage.content === 'string' && (
+          responseMessage.content.toLowerCase().includes('show me bets to judge') || 
+          responseMessage.content.toLowerCase().includes('view bets to judge'))) {
         console.log('Fetching judgeable bets...');
         const bets = await getBets(userId, 'judge_bets');
         console.log('Fetched bets:', bets);

@@ -4,9 +4,9 @@ function BetCard({ bet, onAction }) {
   console.log('BetCard received bet:', bet);
 
   // Ensure flags are boolean values and properly set based on bet status
-  const canJudge = Boolean(bet.canJudge) || (bet.status === 'matched' && !bet.isMyBet);
-  const canAccept = Boolean(bet.canAccept) || (bet.status === 'pending' && !bet.isMyBet);
   const isMyBet = Boolean(bet.isMyBet);
+  const canJudge = Boolean(bet.canJudge) && !isMyBet;
+  const canAccept = Boolean(bet.canAccept) && !isMyBet;
 
   console.log('BetCard flags:', {
     betId: bet._id,
@@ -19,13 +19,8 @@ function BetCard({ bet, onAction }) {
   });
 
   // Helper functions now use the boolean values
-  const shouldShowJudgeActions = () => {
-    return canJudge && !isMyBet && bet.status === 'matched';
-  };
-  
-  const shouldShowAcceptButton = () => {
-    return canAccept && !isMyBet && bet.status === 'pending';
-  };
+  const shouldShowJudgeActions = () => canJudge && bet.status === 'matched';
+  const shouldShowAcceptButton = () => canAccept && bet.status === 'pending';
 
   const handleAcceptClick = () => {
     console.log('Accept button clicked for bet:', bet._id);
@@ -205,10 +200,12 @@ export default function BetList({ bets, text, onAction }) {
       {text && (
         <p className="text-gray-300 mb-4 px-4">{text}</p>
       )}
-      <div className="overflow-x-auto scrollbar-hide snap-x snap-mandatory flex pb-4">
-        {betArray.map((bet) => (
-          <BetCard key={bet._id} bet={bet} onAction={onAction} />
-        ))}
+      <div className="overflow-x-auto scrollbar-hide snap-x snap-mandatory flex pb-4 w-full">
+        <div className="flex min-w-max gap-4">
+          {betArray.map((bet) => (
+            <BetCard key={bet._id} bet={bet} onAction={onAction} />
+          ))}
+        </div>
       </div>
     </div>
   );
