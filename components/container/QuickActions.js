@@ -18,9 +18,9 @@ export default function QuickActions({ onAction }) {
       label: "My Bets"
     },
     {
-      message: "How does this work?",
-      icon: "❓", 
-      label: "WTF?"
+      message: "Show bets to judge",
+      icon: "⚖️",
+      label: "Judge Bets"
     }
   ];
 

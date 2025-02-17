@@ -39,45 +39,64 @@ export function parseAIResponse(aiResponse) {
   };
 }
 
-export function parseIntent(content) {
-  const lowerContent = content.toLowerCase();
+import { generateAIResponse } from '../venice';
 
-  // Betting intents
-  if (lowerContent.includes('place bet') || lowerContent.includes('make bet')) {
-    return {
-      intent: 'betting',
-      confidence: 0.9
-    };
-  }
-
-  // View bets intents - simplified to work with consolidated approach
-  if (lowerContent.includes('bet') || lowerContent.includes('wager')) {
-    // Determine the specific type of bets to show
-    let action = 'view_open_bets'; // default
-    if (lowerContent.includes('my') || lowerContent.includes('mine')) {
-      action = 'view_my_bets';
-    } else if (lowerContent.includes('match') || lowerContent.includes('accept')) {
-      action = 'view_matched_bets';
-    }
+export async function parseIntent(messages) {
+  try {
+    // Get AI response
+    const response = await generateAIResponse(messages);
     
+    // Extract JSON from response
+    const jsonMatch = response.content.match(/\{.*\}/s);
+    if (!jsonMatch) {
+      return {
+        intent: 'chat',
+        confidence: 1.0,
+        response
+      };
+    }
+
+    // Parse JSON data
+    const jsonData = JSON.parse(jsonMatch[0]);
+    
+    // Handle view bets intents
+    if (jsonData.intent === 'view_bets') {
+      let action = jsonData.action || 'view_open_bets';
+      
+      // Map different view types to specific actions
+      switch (action) {
+        case 'view_my_bets':
+        case 'view_open_bets':
+        case 'judge_bets':
+          // These are valid actions, keep them as is
+          break;
+        default:
+          // Default to view_open_bets for unknown actions
+          action = 'view_open_bets';
+      }
+
+      return {
+        intent: 'view_bets',
+        action: action,
+        confidence: jsonData.confidence || 0.9,
+        response
+      };
+    }
+
+    // Handle other intents
     return {
-      intent: 'view_bets',
-      action: action,
-      confidence: 0.95
+      intent: jsonData.intent || 'chat',
+      confidence: jsonData.confidence || 1.0,
+      response,
+      ...jsonData
+    };
+
+  } catch (error) {
+    console.error('Error parsing intent:', error);
+    return {
+      intent: 'chat',
+      confidence: 1.0,
+      error: error.message
     };
   }
-
-  // Basketball query intents
-  if (lowerContent.includes('stats') || lowerContent.includes('player')) {
-    return {
-      intent: 'basketball_query',
-      confidence: 0.8
-    };
-  }
-
-  // Default to unknown intent
-  return {
-    intent: 'unknown',
-    confidence: 0.5
-  };
 } 

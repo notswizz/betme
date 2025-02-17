@@ -15,8 +15,8 @@ import User from '@/models/User';
 import Bet from '@/models/Bet';
 
 // Constants for validation
-const VALID_INTENTS = ['basketball_query', 'place_bet', 'view_bets', 'view_open_bets', 'chat', 'betting'];
-const VALID_MESSAGE_TYPES = ['text', 'player_stats', 'betslip', 'open_bets', 'image', 'bet_success'];
+const VALID_INTENTS = ['basketball_query', 'place_bet', 'view_bets', 'view_open_bets', 'chat', 'betting', 'judge_bets'];
+const VALID_MESSAGE_TYPES = ['text', 'player_stats', 'betslip', 'open_bets', 'image', 'bet_success', 'bet_list'];
 
 // Helper function to handle Venice API responses
 function handleVeniceResponse(response) {
@@ -244,13 +244,11 @@ async function getBets(userId, action = 'view_open_bets') {
           ]
         };
         break;
-      case 'view_matched_bets_to_judge':
+      case 'judge_bets':
         query = {
           status: 'matched',
-          $or: [
-            { userId: userObjectId },
-            { challengerId: userObjectId }
-          ]
+          userId: { $ne: userObjectId },
+          challengerId: { $ne: userObjectId }
         };
         break;
       case 'view_matched_bets':
@@ -308,10 +306,10 @@ async function getBets(userId, action = 'view_open_bets') {
           ? 'Here are your bets:' 
           : "You haven't placed any bets yet. Would you like to place one?";
         break;
-      case 'view_matched_bets_to_judge':
+      case 'judge_bets':
         messageText = formattedBets.length > 0 
-          ? 'Here are your matched bets that need judging. Select the winning team for each bet:' 
-          : "You don't have any matched bets that need judging.";
+          ? 'Here are the matched bets available for judging. You can help determine the winners:' 
+          : "There are no matched bets available for judging at the moment.";
         break;
       case 'view_matched_bets':
         messageText = formattedBets.length > 0 
