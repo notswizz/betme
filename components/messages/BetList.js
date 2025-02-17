@@ -62,6 +62,15 @@ function BetCard({ bet, onAction }) {
       // For original bettor's view of their bet, show their original stake
       Number(bet.stake).toFixed(2);
 
+  // Team highlight colors based on user role
+  const [topHighlight, bottomHighlight] = isChallenger ?
+    ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'] :
+    ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50'];
+
+  const [topOddsHighlight, bottomOddsHighlight] = isChallenger ?
+    ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'] :
+    ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
+
   console.log('Stake calculation:', {
     canAccept,
     isChallenger,
@@ -96,31 +105,23 @@ function BetCard({ bet, onAction }) {
         <div className="p-4">
           {/* Teams */}
           <div className="space-y-2.5">
-            <div className={`flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 ${
-              isChallenger ? 'border-green-500/30 group-hover:border-green-500/50' : 'border-red-500/30 group-hover:border-red-500/50'
-            } transition-colors`}>
+            <div className={`flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 ${topHighlight} transition-colors`}>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">
                   {topTeam}
                 </div>
               </div>
-              <div className={`text-sm font-bold whitespace-nowrap px-2.5 py-1 rounded ${
-                isChallenger ? 
-                'text-green-400 bg-green-500/10 border border-green-500/20' : 
-                'text-red-400 bg-red-500/10 border border-red-500/20'
-              }`}>
+              <div className={`text-sm font-bold whitespace-nowrap px-2.5 py-1 rounded ${topOddsHighlight}`}>
                 {topOdds}
               </div>
             </div>
-            <div className={`flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 ${
-              isChallenger ? 'border-red-500/30 group-hover:border-red-500/50' : 'border-green-500/30 group-hover:border-green-500/50'
-            } transition-colors`}>
+            <div className={`flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 ${bottomHighlight} transition-colors`}>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">
                   {bottomTeam}
                 </div>
               </div>
-              <div className="text-xs text-blue-400 font-medium px-2.5 py-1 rounded bg-blue-500/10 border border-blue-500/20">
+              <div className={`text-xs font-medium px-2.5 py-1 rounded ${bottomOddsHighlight}`}>
                 Line: {bottomLine}
               </div>
             </div>
