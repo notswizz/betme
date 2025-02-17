@@ -64,42 +64,45 @@ function BetCard({ bet, onAction }) {
   const displayStake = canAccept ? 
     // For open bets that can be accepted, show required stake (payout - stake)
     Number(bet.payout - bet.stake).toFixed(2)
-    : (isMyBet && bet.status === 'matched') ?
-      // For matched bets in My Bets view, always show challenger stake
-      Number(bet.payout - bet.stake).toFixed(2)
-      : isChallenger ?
-        // For challenger's view of their own bet, show their stake
+    : isMyBet ?
+      // For my bets, show payout - stake if I'm challenger, original stake if I'm original bettor
+      isChallenger ? 
         Number(bet.payout - bet.stake).toFixed(2)
-        : 
-        // For original bettor's view of their bet, show their original stake
-        Number(bet.stake).toFixed(2);
+        : Number(bet.stake).toFixed(2)
+      : 
+      // For other views, same logic
+      isChallenger ?
+        Number(bet.payout - bet.stake).toFixed(2)
+        : Number(bet.stake).toFixed(2);
 
   // Team highlight colors based on view type
-  const [topHighlight, bottomHighlight] = canJudge ? 
-    // For judge view: no highlights
-    ['border-gray-700/30', 'border-gray-700/30']
-    : canAccept || (isMyBet && bet.status === 'matched') ? 
-      // For open bets and matched bets in My Bets view: green top, red bottom
-      ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50'] 
-      : isMyBet && !isChallenger ?
-        // For my pending bets as original bettor: green top, red bottom
-        ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']
-        :
-        // For my bets as challenger: red top, green bottom
-        ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'];
+  const [topHighlight, bottomHighlight] = canAccept ? 
+    // For open bets: red top, green bottom
+    ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50']
+    : isMyBet ?
+      // For my bets: if I'm challenger show red top/green bottom, if I'm original bettor show green top/red bottom
+      isChallenger ?
+        ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50']
+        : ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50']
+      :
+      // For other views, same logic
+      isChallenger ?
+        ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50']
+        : ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50'];
 
-  const [topOddsHighlight, bottomOddsHighlight] = canJudge ?
-    // For judge view: neutral colors
-    ['text-gray-400 bg-gray-800/50 border border-gray-700/30', 'text-gray-400 bg-gray-800/50 border border-gray-700/30']
-    : canAccept || (isMyBet && bet.status === 'matched') ?
-      // For open bets and matched bets in My Bets view: green top, blue bottom
-      ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
-      : isMyBet && !isChallenger ?
-        // For my pending bets as original bettor: green top, blue bottom
-        ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
-        :
-        // For my bets as challenger: red top, blue bottom
-        ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
+  const [topOddsHighlight, bottomOddsHighlight] = canAccept ? 
+    // For open bets: red top, blue bottom
+    ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
+    : isMyBet ?
+      // For my bets: if I'm challenger show red top/blue bottom, if I'm original bettor show green top/blue bottom
+      isChallenger ?
+        ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
+        : ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
+      :
+      // For other views, same logic
+      isChallenger ?
+        ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20']
+        : ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
 
   console.log('Stake calculation:', {
     canAccept,
