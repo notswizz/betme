@@ -53,12 +53,18 @@ function BetCard({ bet, onAction }) {
 
   // Calculate the stake to display
   const displayStake = canAccept ? 
-    // If user can accept this bet, show the required challenger stake
-    bet.payout - bet.stake 
-    : bet.stake;  // Otherwise show the original stake
+    // For open bets that can be accepted, show required stake (payout - stake)
+    Number(bet.payout - bet.stake).toFixed(2)
+    : isChallenger ?
+      // For challenger's view of their own bet, show their stake (payout - original stake)
+      Number(bet.payout - bet.stake).toFixed(2)
+      : 
+      // For original bettor's view of their bet, show their original stake
+      Number(bet.stake).toFixed(2);
 
   console.log('Stake calculation:', {
     canAccept,
+    isChallenger,
     originalStake: bet.stake,
     payout: bet.payout,
     calculatedStake: displayStake
@@ -90,17 +96,25 @@ function BetCard({ bet, onAction }) {
         <div className="p-4">
           {/* Teams */}
           <div className="space-y-2.5">
-            <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-red-500/30 group-hover:border-red-500/50 transition-colors">
+            <div className={`flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 ${
+              isChallenger ? 'border-green-500/30 group-hover:border-green-500/50' : 'border-red-500/30 group-hover:border-red-500/50'
+            } transition-colors`}>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">
                   {topTeam}
                 </div>
               </div>
-              <div className="text-sm font-bold whitespace-nowrap px-2.5 py-1 rounded text-red-400 bg-red-500/10 border border-red-500/20">
+              <div className={`text-sm font-bold whitespace-nowrap px-2.5 py-1 rounded ${
+                isChallenger ? 
+                'text-green-400 bg-green-500/10 border border-green-500/20' : 
+                'text-red-400 bg-red-500/10 border border-red-500/20'
+              }`}>
                 {topOdds}
               </div>
             </div>
-            <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-green-500/30 group-hover:border-green-500/50 transition-colors">
+            <div className={`flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 ${
+              isChallenger ? 'border-red-500/30 group-hover:border-red-500/50' : 'border-green-500/30 group-hover:border-green-500/50'
+            } transition-colors`}>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">
                   {bottomTeam}
@@ -120,12 +134,12 @@ function BetCard({ bet, onAction }) {
                   {shouldShowAcceptButton() ? 'Required Stake' : 'Your Stake'}
                 </div>
                 <div className="text-white font-semibold text-base">
-                  ${displayStake.toFixed(2)}
+                  ${displayStake}
                 </div>
               </div>
               <div className="text-right">
                 <div className="text-gray-500 text-xs mb-0.5">Total Payout</div>
-                <div className="text-green-400 font-semibold text-base">${bet.payout}</div>
+                <div className="text-green-400 font-semibold text-base">${Number(bet.payout).toFixed(2)}</div>
               </div>
             </div>
           </div>
