@@ -90,17 +90,17 @@ function BetCard({ bet, onAction }) {
         <div className="p-4">
           {/* Teams */}
           <div className="space-y-2.5">
-            <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-green-500/30 group-hover:border-green-500/50 transition-colors">
+            <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-red-500/30 group-hover:border-red-500/50 transition-colors">
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">
                   {topTeam}
                 </div>
               </div>
-              <div className="text-green-400 text-sm font-bold whitespace-nowrap px-2.5 py-1 rounded bg-green-500/10 border border-green-500/20">
+              <div className="text-sm font-bold whitespace-nowrap px-2.5 py-1 rounded text-red-400 bg-red-500/10 border border-red-500/20">
                 {topOdds}
               </div>
             </div>
-            <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-red-500/30 group-hover:border-red-500/50 transition-colors">
+            <div className="flex items-center justify-between gap-3 bg-gray-800/30 p-2.5 rounded-lg border-2 border-green-500/30 group-hover:border-green-500/50 transition-colors">
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">
                   {bottomTeam}
