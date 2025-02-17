@@ -63,13 +63,11 @@ function BetCard({ bet, onAction }) {
       Number(bet.stake).toFixed(2);
 
   // Team highlight colors based on user role
-  const [topHighlight, bottomHighlight] = isChallenger ?
-    ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'] :
-    ['border-green-500/30 group-hover:border-green-500/50', 'border-red-500/30 group-hover:border-red-500/50'];
+  const [topHighlight, bottomHighlight] = 
+    ['border-red-500/30 group-hover:border-red-500/50', 'border-green-500/30 group-hover:border-green-500/50'];
 
-  const [topOddsHighlight, bottomOddsHighlight] = isChallenger ?
-    ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'] :
-    ['text-green-400 bg-green-500/10 border border-green-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
+  const [topOddsHighlight, bottomOddsHighlight] = 
+    ['text-red-400 bg-red-500/10 border border-red-500/20', 'text-blue-400 bg-blue-500/10 border border-blue-500/20'];
 
   console.log('Stake calculation:', {
     canAccept,
